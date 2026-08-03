@@ -18,3 +18,4 @@ token-admin.txt
 
 # CSV xuat tu Google Sheet — co the chua du lieu nhay cam
 data/
+.github/workflows/ci.yml
