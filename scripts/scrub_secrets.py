@@ -66,7 +66,7 @@ def shred(path: Path, dry: bool) -> bool:
     return True
 
 
-def scrub_columns(path: Path, dry: bool) -> tuple[int, list[str]]:
+def scrub_columns(path: Path, dry: bool, keep_notes: bool = True) -> tuple[int, list[str]]:
     """Làm rỗng giá trị ở các cột secret, giữ nguyên mọi thứ khác."""
     if not path.exists():
         return 0, []
@@ -90,8 +90,11 @@ def scrub_columns(path: Path, dry: bool) -> tuple[int, list[str]]:
     for row in rows:
         for j in targets:
             if j < len(row) and row[j].strip():
-                # Giữ lại ghi chú về phương thức, đó không phải mật khẩu.
-                if "key ssh" in row[j].lower():
+                # "dùng key ssh" là ghi chú về PHƯƠNG THỨC xác thực, không phải
+                # giá trị bí mật — mặc định giữ lại vì nó có ích khi vận hành
+                # (biết máy nào dùng key, máy nào còn dùng mật khẩu).
+                # Với --clear-notes thì xoá luôn cho sạch tuyệt đối.
+                if keep_notes and "key ssh" in row[j].lower():
                     continue
                 if row[j].strip().lower() in SECRET_COLS:
                     continue  # đây là chính dòng tiêu đề
@@ -111,6 +114,8 @@ def scrub_columns(path: Path, dry: bool) -> tuple[int, list[str]]:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--clear-notes", action="store_true",
+                    help="xoá luôn ghi chú kiểu 'dùng key ssh' trong cột secret")
     ap.add_argument("--also", nargs="*", default=[],
                     help="đường dẫn CSV khác cần làm sạch (ví dụ bản trong Downloads)")
     a = ap.parse_args()
@@ -123,7 +128,7 @@ def main() -> None:
     print("\n2) CSV nguồn — làm rỗng cột secret:")
     total = 0
     for p in SOURCES + [Path(x) for x in a.also]:
-        c, _ = scrub_columns(p, a.dry_run)
+        c, _ = scrub_columns(p, a.dry_run, keep_notes=not a.clear_notes)
         total += c
         if not c and p.exists():
             print(f"  {p.name}: không có cột secret nào")
