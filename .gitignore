@@ -1,0 +1,20 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+*.db
+sysops.db
+.pytest_cache/
+.ruff_cache/
+
+# KHÔNG BAO GIỜ commit hai file này — chứa mật khẩu dạng rõ
+vault_import.csv
+needs_review.csv
+
+# Token dang ro — khong bao gio commit
+token-admin.txt
+.pgtest
+
+# CSV xuat tu Google Sheet — co the chua du lieu nhay cam
+data/

@@ -1,0 +1,63 @@
+{% import "_icons.html" as ico %}
+<div class="scrim" id="drawer">
+  <div class="modal" role="dialog" aria-modal="true" aria-label="Xử lý finding">
+
+    <div class="modal-head">
+      <div>
+        <h3>Xử lý chênh lệch</h3>
+        <div class="sub">
+          <span class="chip chip-neutral">{{ f.type }}</span>
+          <span class="mono" style="margin-left:6px">{{ f.subject }}</span>
+        </div>
+      </div>
+      <button class="icon-btn" onclick="document.getElementById('drawer').remove()"
+              aria-label="Đóng">×</button>
+    </div>
+
+    <form hx-post="/ui/drift/{{ f.id }}/resolve" hx-target="#drawer" hx-swap="outerHTML">
+      <div class="modal-body stack gap-md">
+        <table class="props">
+          <tr><th>Mức độ</th><td>{{ f.severity }}</td></tr>
+          <tr><th>Phát hiện lần đầu</th><td>{{ f.first_seen_at[:16] | replace("T", " ") }}</td></tr>
+          <tr><th>Hạn SLA</th><td>{{ f.sla_deadline[:16] | replace("T", " ") }}{% if f.sla_breached %} (đã quá){% endif %}</td></tr>
+          {% for k, v in (f.detail or {}).items() %}
+          <tr><th>{{ k }}</th><td>{{ v }}</td></tr>
+          {% endfor %}
+        </table>
+
+        <div class="field">
+          <label for="rf-status">Chuyển sang</label>
+          <select class="input" id="rf-status" name="status">
+            <option value="resolved">Đã xử lý xong</option>
+            <option value="acknowledged">Đã tiếp nhận, đang xử lý</option>
+            <option value="ignored">Bỏ qua (chấp nhận hiện trạng)</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="rf-note">Ghi chú xử lý *</label>
+          <input class="input" id="rf-note" name="note" required maxlength="2000"
+                 placeholder="Đã xác minh với chủ máy, VM còn dùng, gia hạn tới Q4">
+        </div>
+
+        <div class="banner banner-warn" style="margin:0">
+          {{ ico.icon("shield") }}
+          <div>
+            Hành động này được ghi vào nhật ký kèm tên bạn. Nếu chênh lệch còn
+            tồn tại, lượt đồng bộ sau sẽ mở lại finding — đóng nó không sửa
+            được nguyên nhân gốc.
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-foot">
+        <button class="btn btn-ghost" type="button"
+                onclick="document.getElementById('drawer').remove()">Huỷ</button>
+        <button class="btn btn-primary" type="submit">
+          {{ ico.icon("check_circle") }}Xác nhận<span class="spin"></span>
+        </button>
+      </div>
+    </form>
+
+  </div>
+</div>

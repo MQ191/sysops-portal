@@ -1,0 +1,41 @@
+# --- Core ---
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+sqlalchemy==2.0.36
+alembic==1.14.0
+pydantic==2.10.4
+python-multipart==0.0.20        # form POST cho UI HTMX
+jinja2==3.1.5                   # template UI — autoescape chống XSS
+
+# --- Database ---
+psycopg[binary]==3.2.3          # PostgreSQL driver
+
+# --- Hạ tầng / mạng ---
+icmplib==3.0.4                  # ping async, không fork process
+pyvmomi==8.0.3.0.1              # vCenter API
+
+# --- Job nền ---
+celery==5.4.0
+redis==5.2.1
+
+# --- Giám sát ---
+prometheus-fastapi-instrumentator==7.0.0
+
+# --- Xác thực LDAP (tuỳ chọn) ---
+# python-ldap khó build trên Windows và chỉ cần khi AUTH_MODE=ldap.
+# Cài riêng trên máy chủ production:  pip install python-ldap==3.4.4
+
+# --- Dev / test ---
+pytest==8.3.4
+httpx==0.28.1                   # test client cho FastAPI
+ruff==0.8.4
+
+# GHI CHÚ VỀ NHỮNG THỨ ĐÃ BỎ
+# --------------------------
+# Bản trước khai báo netaddr, python-nmap, hvac, python-ldap nhưng không có
+# dòng code nào dùng tới. Dependency không dùng vẫn phải vá lỗi bảo mật, vẫn
+# làm chậm build, và làm người đọc tưởng tính năng đã có:
+#   netaddr      -> ipaddress trong thư viện chuẩn đã đủ
+#   python-nmap  -> TCP SYN scan chưa cài đặt (spec §5.2, chưa làm)
+#   hvac         -> portal chỉ lưu vault_path, không gọi Vault API
+#   python-ldap  -> chuyển sang cài tuỳ chọn, xem ở trên

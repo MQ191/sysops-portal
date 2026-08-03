@@ -1,0 +1,63 @@
+{% import "_icons.html" as ico %}
+{# Bảng finding — tách riêng để nút xử lý có thể swap lại chính nó sau khi
+   đóng một finding, không phải nạp lại cả trang. #}
+<div id="drift-table">
+  <div class="table-head">
+    <h3>{{ status_label }}</h3>
+    <div class="row gap-sm">
+      {% if breached %}<span class="chip chip-error"><span class="dot"></span>{{ breached }} quá SLA</span>{% endif %}
+      <span class="chip chip-neutral">{{ findings | length }} bản ghi</span>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table class="data">
+      <thead>
+        <tr>
+          <th>Mức độ</th><th>Loại</th><th>Đối tượng</th><th>Chi tiết</th>
+          <th>Hạn SLA</th>{% if can_resolve %}<th class="right">Xử lý</th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+      {% for f in findings %}
+        <tr>
+          <td>
+            {% if f.severity in ('critical', 'high') %}
+            <span class="chip chip-error"><span class="dot"></span>{{ f.severity }}</span>
+            {% elif f.severity == 'medium' %}
+            <span class="chip chip-warn"><span class="dot"></span>medium</span>
+            {% else %}
+            <span class="chip chip-neutral"><span class="dot"></span>low</span>{% endif %}
+          </td>
+          <td class="cell-title">{{ f.type }}</td>
+          <td class="ip">{{ f.subject }}</td>
+          <td class="cell-sub">
+            {% for k, v in (f.detail or {}).items() %}{{ k }}={{ v }}{% if not loop.last %} · {% endif %}{% endfor %}
+          </td>
+          <td>
+            <div class="cell-sub">{{ f.sla_deadline[:16] | replace("T", " ") }}</div>
+            {% if f.sla_breached %}
+            <span class="chip chip-error"><span class="dot"></span>Quá hạn</span>
+            {% else %}
+            <span class="chip chip-ok"><span class="dot"></span>Trong hạn</span>
+            {% endif %}
+          </td>
+          {% if can_resolve %}
+          <td class="right">
+            <button class="btn btn-quiet" style="padding:6px 12px"
+                    hx-get="/ui/drift/{{ f.id }}/resolve-form"
+                    hx-target="#drawer-slot" hx-swap="innerHTML">Xử lý</button>
+          </td>
+          {% endif %}
+        </tr>
+      {% else %}
+        <tr>
+          <td colspan="{{ 6 if can_resolve else 5 }}" class="empty center">
+            Không có finding nào ở trạng thái này.
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>

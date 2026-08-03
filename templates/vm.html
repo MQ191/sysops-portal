@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% import "_icons.html" as ico %}
+{% block title %}Vòng đời VM · SysOps Portal{% endblock %}
+{% block topbar %}Vòng đời VM{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="crumbs"><span>SysOps</span><span>/</span><span class="cur">Vòng đời VM</span></div>
+    <h2>Vòng đời VM</h2>
+    <div class="page-sub">Chủ sở hữu, hạn dùng và tài nguyên có thể thu hồi.</div>
+  </div>
+</div>
+
+<div class="grid12">
+
+  <div class="card metric col-4">
+    <div class="metric-top">
+      <div class="metric-icon i-primary">{{ ico.icon("dns") }}</div>
+      <h3 class="metric-label">Tổng thiết bị</h3>
+    </div>
+    <div>
+      <div class="metric-value">{{ summary.total }}</div>
+      <div class="metric-note">Đang quản lý trong portal</div>
+    </div>
+  </div>
+
+  <div class="card metric col-4 {{ 'is-alert' if summary.expiring else '' }}">
+    <div class="metric-top">
+      <div class="metric-icon {{ 'i-error' if summary.expiring else 'i-secondary' }}">
+        {{ ico.icon("warning") }}
+      </div>
+      <h3 class="metric-label">Sắp hết hạn (90 ngày)</h3>
+    </div>
+    <div>
+      <div class="metric-value">{{ summary.expiring }}</div>
+      <div class="metric-note">
+        Giải phóng được {{ summary.reclaimable_vcpu }} vCPU ·
+        {{ summary.reclaimable_ram_gb | round | int }} GB RAM
+      </div>
+    </div>
+  </div>
+
+  <div class="card metric col-4">
+    <div class="metric-top">
+      <div class="metric-icon i-dim">{{ ico.icon("shield") }}</div>
+      <h3 class="metric-label">Thiếu thông tin bắt buộc</h3>
+    </div>
+    <div>
+      <div class="metric-value">{{ summary.missing }}</div>
+      <div class="metric-note">Thiếu người đứng tên hoặc hạn dùng</div>
+    </div>
+  </div>
+
+  <div class="card-flat col-12">
+    <div class="filters" id="vm-filters">
+      <div class="field grow">
+        <label for="vf-q">Tìm kiếm</label>
+        <div class="search-wrap">
+          {{ ico.icon("search") }}
+          <input class="input" id="vf-q" name="q" type="search"
+                 placeholder="Tên thiết bị, địa chỉ IP, hoặc email người đứng tên…"
+                 hx-get="/ui/vm/table" hx-target="#vm-table" hx-swap="outerHTML"
+                 hx-trigger="input changed delay:300ms, search"
+                 hx-include="#vm-filters">
+        </div>
+      </div>
+      <div class="field">
+        <label for="vf-dept">Đơn vị</label>
+        <select class="input" id="vf-dept" name="department"
+                hx-get="/ui/vm/table" hx-target="#vm-table" hx-swap="outerHTML"
+                hx-include="#vm-filters">
+          <option value="">Tất cả</option>
+          {% for d in departments %}<option value="{{ d }}">{{ d }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label for="vf-status">Trạng thái</label>
+        <select class="input" id="vf-status" name="lifecycle_status"
+                hx-get="/ui/vm/table" hx-target="#vm-table" hx-swap="outerHTML"
+                hx-include="#vm-filters">
+          <option value="">Tất cả</option>
+          {% for v, lbl in [("active","Đang chạy"),("expiring","Sắp hết hạn"),
+                            ("pending_reclaim","Chờ thu hồi"),("shutdown","Đã tắt"),
+                            ("archived","Đã lưu trữ")] %}
+          <option value="{{ v }}">{{ lbl }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label for="vf-gap">Thiếu thông tin</label>
+        <select class="input" id="vf-gap" name="gap"
+                hx-get="/ui/vm/table" hx-target="#vm-table" hx-swap="outerHTML"
+                hx-include="#vm-filters">
+          <option value="">Không lọc</option>
+          <option value="owner">Thiếu người đứng tên</option>
+          <option value="expiry">Thiếu hạn dùng</option>
+        </select>
+      </div>
+    </div>
+
+    {% include "_vm_table.html" %}
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,38 @@
+# QUAN TRỌNG NHẤT: chặn secret lọt vào image.
+#
+# .gitignore chỉ chặn khỏi git, KHÔNG chặn khỏi Docker build context. Với
+# `COPY . .` trong Dockerfile, mọi file dưới đây sẽ nằm vĩnh viễn trong một
+# layer của image — kể cả khi bị xoá ở layer sau. `vault_import.csv` chứa
+# toàn bộ user/pass trích từ Google Sheet ở dạng rõ.
+.env
+.env.*
+!.env.example
+vault_import.csv
+needs_review.csv
+*.db
+*.sqlite
+*.sqlite3
+*.pem
+*.key
+id_rsa*
+
+# Rác build
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+htmlcov/
+.coverage
+
+# Không cần trong image runtime
+.git/
+.github/
+tests/
+docs/
+*.md
+!README.md
+.gitignore
+docker-compose.yml

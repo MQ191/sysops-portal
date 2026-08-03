@@ -1,0 +1,53 @@
+{% import "_icons.html" as ico %}
+
+{% if not health.healthy %}
+<div class="banner banner-danger">
+  {{ ico.icon("warning") }}
+  <div>
+    <b>{{ health.stale_subnets }}/{{ health.total_subnets }} dải không có dữ liệu quét tươi</b>
+    Khi scanner không nhìn thấy một dải, mọi IP trong đó bị ghi nhận là "chết"
+    và hệ thống sẽ tưởng chúng đang trống. Gợi ý IP cho các dải này đã bị hạ
+    độ tin cậy xuống mức thấp nhất — kiểm tra route và quyền raw socket của scanner.
+  </div>
+</div>
+{% endif %}
+
+<div class="card-flat">
+  <div class="table-head">
+    <h3>Trạng thái quét theo dải</h3>
+    {% if health.healthy %}
+    <span class="chip chip-ok"><span class="dot"></span>Tất cả đều tươi</span>
+    {% else %}
+    <span class="chip chip-error"><span class="dot"></span>{{ health.stale_subnets }} dải cũ</span>
+    {% endif %}
+  </div>
+  <div class="table-wrap">
+    <table class="data">
+      <thead>
+        <tr><th>Dải</th><th>Lần quét tốt gần nhất</th><th>Ngưỡng</th><th class="right">Trạng thái</th></tr>
+      </thead>
+      <tbody>
+      {% for s in health.subnets %}
+        <tr>
+          <td class="ip">{{ s.cidr }}</td>
+          <td>
+            {% if s.hours_since is not none %}
+              {{ s.hours_since }} giờ trước
+            {% else %}
+              <span class="muted">chưa bao giờ</span>
+            {% endif %}
+          </td>
+          <td class="cell-sub">{{ s.threshold_hours }} giờ</td>
+          <td class="right">
+            {% if s.stale %}
+            <span class="chip chip-error"><span class="dot"></span>Cũ</span>
+            {% else %}
+            <span class="chip chip-ok"><span class="dot"></span>Tươi</span>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>

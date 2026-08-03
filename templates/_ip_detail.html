@@ -1,0 +1,84 @@
+{% import "_icons.html" as ico %}
+{#
+  Drawer chi tiết một địa chỉ IP. Hiển thị đúng những hành động mà vai trò
+  hiện tại được phép làm — nút bị ẩn không thay thế cho kiểm tra phân quyền
+  ở tầng API, nhưng hiện nút rồi báo 403 là thiết kế tồi.
+#}
+<div class="scrim" id="drawer" onclick="if(event.target===this) htmx.trigger('#drawer','closeDrawer')"
+     hx-on:close-drawer="this.remove()">
+  <div class="modal" role="dialog" aria-modal="true" aria-label="Chi tiết địa chỉ {{ ip.address }}">
+
+    <div class="modal-head">
+      <div>
+        <h3 class="mono" style="font-size:18px">{{ ip.address }}</h3>
+        <div class="sub">
+          {{ subnet.cidr }}{% if subnet.name %} · {{ subnet.name }}{% endif %}
+        </div>
+      </div>
+      <div class="row gap-sm">
+        {% if ip.status == 'allocated' %}<span class="chip chip-primary">Đã cấp</span>
+        {% elif ip.status == 'free' %}<span class="chip chip-ok">Trống</span>
+        {% elif ip.status == 'reserved' %}<span class="chip chip-warn">Đang giữ chỗ</span>
+        {% elif ip.status == 'quarantine' %}<span class="chip chip-warn">Cách ly</span>
+        {% elif ip.status == 'conflict' %}<span class="chip chip-error">Xung đột</span>
+        {% else %}<span class="chip chip-neutral">{{ ip.status }}</span>{% endif %}
+        <button class="icon-btn" onclick="document.getElementById('drawer').remove()"
+                aria-label="Đóng">×</button>
+      </div>
+    </div>
+
+    <div class="modal-body">
+      {% if ip.unusable_reason %}
+      <div class="banner banner-warn" style="margin-bottom:var(--margin-md)">
+        {{ ico.icon("warning") }}<div>{{ ip.unusable_reason }}</div>
+      </div>
+      {% endif %}
+
+      <table class="props">
+        {% if device %}
+        <tr><th>Thiết bị</th><td>{{ device.name }}</td></tr>
+        <tr><th>Đơn vị / Dự án</th><td>{{ device.department or "—" }} / {{ device.project or "—" }}</td></tr>
+        <tr><th>Người đứng tên</th><td>{{ device.owner_email or "chưa có" }}</td></tr>
+        <tr><th>Hạn dùng</th><td>{{ device.expires_at or "chưa có" }}</td></tr>
+        <tr><th>Cấu hình</th><td>{{ device.cpu_cores or "?" }} vCPU · {{ device.ram_gb or "?" }} GB RAM · {{ device.disk_gb or "?" }} GB</td></tr>
+        {% if device.ticket_url %}
+        <tr><th>Ticket</th><td><a href="{{ device.ticket_url }}" target="_blank" rel="noopener" style="color:var(--secondary)">Mở trên GLPI</a></td></tr>
+        {% endif %}
+        {% else %}
+        <tr><th>Thiết bị</th><td class="muted">Chưa gán cho thiết bị nào</td></tr>
+        {% endif %}
+
+        <tr><th>Lần cuối thấy phản hồi</th><td>{{ ip.last_seen_alive_at or "chưa bao giờ" }}</td></tr>
+        <tr><th>Số lần quét chết liên tiếp</th><td>{{ ip.consecutive_dead_scans }}</td></tr>
+        <tr><th>Số lần quét trong 7 ngày</th><td>{{ ip.scans_last_7d }}</td></tr>
+        {% if ip.mac_address %}<tr><th>MAC</th><td class="mono">{{ ip.mac_address }}</td></tr>{% endif %}
+        {% if ip.conflict_count %}<tr><th>Lịch sử xung đột</th><td>{{ ip.conflict_count }} lần</td></tr>{% endif %}
+        {% if ip.quarantine_until %}
+        <tr><th>Hết cách ly</th><td>{{ ip.quarantine_until }}</td></tr>
+        {% endif %}
+      </table>
+    </div>
+
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="document.getElementById('drawer').remove()">Đóng</button>
+
+      {% if can_allocate and ip.status in ('free',) and not ip.unusable_reason %}
+      <button class="btn btn-primary"
+              hx-post="/ui/ip/{{ ip.address }}/reserve"
+              hx-target="#drawer" hx-swap="outerHTML">
+        {{ ico.icon("add_circle") }}Giữ chỗ địa chỉ này<span class="spin"></span>
+      </button>
+      {% endif %}
+
+      {% if can_release and ip.status == 'allocated' %}
+      <button class="btn btn-ghost" style="border-color:var(--error);color:var(--error)"
+              hx-post="/ui/ip/{{ ip.address }}/release"
+              hx-confirm="Thu hồi {{ ip.address }}? Địa chỉ sẽ vào cách ly {{ subnet.cooldown_days }} ngày trước khi cấp lại được."
+              hx-target="#drawer" hx-swap="outerHTML">
+        Thu hồi<span class="spin"></span>
+      </button>
+      {% endif %}
+    </div>
+
+  </div>
+</div>

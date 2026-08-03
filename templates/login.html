@@ -1,0 +1,89 @@
+{% import "_icons.html" as ico %}<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Đăng nhập · SysOps Portal</title>
+<link rel="stylesheet" href="/static/css/proton.css">
+</head>
+<body>
+<div class="login-wrap">
+  <div class="login-card">
+
+    <div class="login-brand">
+      <div class="brand-mark">S</div>
+      <div>
+        <div class="brand-name">SysOps Portal</div>
+        <div class="brand-sub">IPAM &amp; vòng đời VM · đội IT System</div>
+      </div>
+    </div>
+
+    <div class="card">
+      {% if error %}
+      <div class="banner banner-danger">
+        {{ ico.icon("warning") }}<div>{{ error }}</div>
+      </div>
+      {% endif %}
+
+      {% if mode == "token" %}
+      <h3 style="margin-bottom:8px">Đăng nhập bằng token</h3>
+      <p class="t-body-md muted" style="margin-top:0">
+        Dán bearer token của bạn vào ô bên dưới. Hệ thống đổi nó lấy một phiên
+        đăng nhập có thời hạn, để bạn không phải dán lại ở mỗi thao tác.
+      </p>
+      <form method="post" action="/ui/login" class="stack gap-md">
+        <input type="hidden" name="next" value="{{ next_url }}">
+        <div class="field">
+          <label for="lg-user">Email <span class="muted">(để trống nếu không chắc)</span></label>
+          <input class="input" id="lg-user" name="username" autocomplete="username"
+                 placeholder="ten.ho@ntq-solution.com.vn">
+        </div>
+        <div class="field">
+          <label for="lg-pass">Bearer token</label>
+          <input class="input" id="lg-pass" name="password" type="password" required
+                 autofocus autocomplete="current-password" placeholder="dán token vào đây">
+        </div>
+        <button class="btn btn-primary btn-block" type="submit">Đăng nhập</button>
+      </form>
+      <p class="t-label-sm muted" style="margin-top:var(--margin-md)">
+        Quản trị viên sinh token bằng
+        <span class="tag-mono">python -m auth mktoken &lt;email&gt; &lt;vai-trò&gt;</span>
+      </p>
+
+      {% else %}
+      <h3 style="margin-bottom:var(--margin-md)">Đăng nhập</h3>
+      <form method="post" action="/ui/login" class="stack gap-md">
+        <input type="hidden" name="next" value="{{ next_url }}">
+        <div class="field">
+          <label for="lg-user">
+            {% if mode == "dev" %}Email (chế độ dev — không kiểm tra mật khẩu){% else %}Tài khoản công ty{% endif %}
+          </label>
+          <input class="input" id="lg-user" name="username" required autofocus
+                 autocomplete="username" placeholder="ten.ho@ntq-solution.com.vn">
+        </div>
+        <div class="field">
+          <label for="lg-pass">Mật khẩu</label>
+          <input class="input" id="lg-pass" name="password" type="password"
+                 autocomplete="current-password"
+                 {% if mode != "dev" %}required{% endif %}>
+        </div>
+        <button class="btn btn-primary btn-block" type="submit">Đăng nhập</button>
+      </form>
+      {% endif %}
+    </div>
+
+    {% if mode == "dev" %}
+    <div class="banner banner-danger" style="margin-top:var(--margin-md)">
+      {{ ico.icon("warning") }}
+      <div>
+        <b>Chế độ xác thực dev</b>
+        Mật khẩu không được kiểm tra và ai cũng tự khai được vai trò. Chỉ chạy
+        được với SQLite — ứng dụng từ chối khởi động ở chế độ này trên cơ sở
+        dữ liệu thật.
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+</body>
+</html>

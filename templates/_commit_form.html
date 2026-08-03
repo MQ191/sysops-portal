@@ -1,0 +1,125 @@
+{% import "_icons.html" as ico %}
+{#
+  Bước 2 của luồng cấp phát: đã giữ chỗ xong, giờ khai báo thiết bị rồi chốt.
+
+  Giữ chỗ có TTL — hiển thị đồng hồ đếm ngược vì hết hạn giữa chừng là tình
+  huống hay xảy ra thật (kỹ sư mở form rồi đi tạo VM trên vCenter), và thông
+  báo "token hết hạn" mà không báo trước thì rất khó chịu.
+#}
+<div class="scrim" id="drawer">
+  <div class="modal" role="dialog" aria-modal="true" aria-label="Chốt cấp {{ address }}">
+
+    <div class="modal-head">
+      <div>
+        <h3>Khai báo thiết bị</h3>
+        <div class="sub">
+          Đã giữ chỗ <span class="mono">{{ address }}</span> cho {{ reserved_by }} ·
+          còn <b id="ttl">{{ ttl_minutes }}:00</b>
+        </div>
+      </div>
+      <button class="icon-btn" hx-post="/ui/reserve/{{ token }}/cancel"
+              hx-target="#drawer" hx-swap="outerHTML" aria-label="Huỷ giữ chỗ">×</button>
+    </div>
+
+    <form hx-post="/ui/ip/commit" hx-target="#drawer" hx-swap="outerHTML">
+      <input type="hidden" name="token" value="{{ token }}">
+      <div class="modal-body stack gap-md">
+
+        <div class="field">
+          <label for="cf-name">Tên thiết bị *</label>
+          <input class="input" id="cf-name" name="device_name" required
+                 placeholder="{{ suggested_name }}" value="{{ suggested_name }}">
+        </div>
+
+        <div class="field">
+          <label for="cf-owner">Người đứng tên * <span class="muted">(bắt buộc — không có owner thì không ai dám thu hồi)</span></label>
+          <input class="input" id="cf-owner" name="owner_email" type="email" required
+                 placeholder="ten.ho@ntq-solution.com.vn">
+        </div>
+
+        <div class="form-row">
+          <div class="field grow" style="flex:1">
+            <label for="cf-dept">Đơn vị</label>
+            <input class="input" id="cf-dept" name="department" value="{{ department or '' }}" placeholder="SDC11">
+          </div>
+          <div class="field grow" style="flex:1">
+            <label for="cf-proj">Dự án</label>
+            <input class="input" id="cf-proj" name="project" value="{{ project or '' }}" placeholder="NIGHTLIFE">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="field" style="flex:1">
+            <label for="cf-exp">Hạn dùng *</label>
+            <input class="input" id="cf-exp" name="expires_at" type="date" required value="{{ default_expiry }}">
+          </div>
+          <div class="field" style="flex:1">
+            <label for="cf-ticket">Mã ticket GLPI</label>
+            <input class="input" id="cf-ticket" name="ticket_id" placeholder="9440">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="field" style="flex:1">
+            <label for="cf-cpu">vCPU</label>
+            <input class="input" id="cf-cpu" name="cpu_cores" type="number" min="1" max="512" value="4">
+          </div>
+          <div class="field" style="flex:1">
+            <label for="cf-ram">RAM (GB)</label>
+            <input class="input" id="cf-ram" name="ram_gb" type="number" min="1" max="8192" value="8">
+          </div>
+          <div class="field" style="flex:1">
+            <label for="cf-disk">Disk (GB)</label>
+            <input class="input" id="cf-disk" name="disk_gb" type="number" min="1" value="100">
+          </div>
+        </div>
+
+        <div class="banner banner-warn" style="margin:0">
+          {{ ico.icon("shield") }}
+          <div>
+            Khi bấm chốt, hệ thống <b>ping và tra ARP lại địa chỉ này ngay lập
+            tức</b>. Nếu có thiết bị phản hồi, giao dịch bị huỷ và địa chỉ được
+            đánh dấu xung đột — dữ liệu quét định kỳ luôn có độ trễ.
+          </div>
+        </div>
+
+        {% if can_skip_check %}
+        <label class="row gap-sm" style="font-size:13px;cursor:pointer">
+          <input type="checkbox" name="skip_liveness_check" value="true">
+          Bỏ qua bước xác minh trực tiếp (chỉ dùng khi mạng chặn ICMP và bạn đã tự kiểm tra)
+        </label>
+        {% endif %}
+      </div>
+
+      <div class="modal-foot">
+        <button class="btn btn-ghost" type="button"
+                hx-post="/ui/reserve/{{ token }}/cancel"
+                hx-target="#drawer" hx-swap="outerHTML">Huỷ giữ chỗ</button>
+        <button class="btn btn-primary" type="submit">
+          {{ ico.icon("check_circle") }}Xác minh &amp; chốt cấp<span class="spin"></span>
+        </button>
+      </div>
+    </form>
+
+  </div>
+</div>
+
+<script>
+(function () {
+  var el = document.getElementById('ttl');
+  if (!el) return;
+  var left = {{ ttl_minutes }} * 60;
+  var t = setInterval(function () {
+    left -= 1;
+    if (left <= 0) {
+      clearInterval(t);
+      el.textContent = 'đã hết hạn';
+      el.style.color = 'var(--error)';
+      return;
+    }
+    var m = Math.floor(left / 60), s = left % 60;
+    el.textContent = m + ':' + (s < 10 ? '0' : '') + s;
+    if (left < 300) el.style.color = 'var(--error)';
+  }, 1000);
+})();
+</script>

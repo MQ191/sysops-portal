@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% import "_icons.html" as ico %}
+{% block title %}Hàng đợi lệch · SysOps Portal{% endblock %}
+{% block topbar %}Hàng đợi lệch{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="crumbs"><span>SysOps</span><span>/</span><span class="cur">Hàng đợi lệch</span></div>
+    <h2>Chênh lệch giữa hệ thống và thực tế</h2>
+    <div class="page-sub">
+      Hệ thống chỉ phát hiện và xếp hàng đợi theo SLA — mọi hành động phá huỷ
+      đều cần người phê duyệt.
+    </div>
+  </div>
+</div>
+
+<div class="card-flat">
+  <div class="filters">
+    <div class="field">
+      <label for="f-status">Trạng thái</label>
+      <select class="input" id="f-status" name="status"
+              hx-get="/ui/drift/table" hx-target="#drift-table" hx-swap="outerHTML"
+              hx-include="#f-severity, #f-sla">
+        {% for v, lbl in [("open","Đang mở"),("acknowledged","Đã tiếp nhận"),
+                          ("resolved","Đã xử lý"),("ignored","Đã bỏ qua")] %}
+        <option value="{{ v }}" {% if v == cur_status %}selected{% endif %}>{{ lbl }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="f-severity">Mức độ</label>
+      <select class="input" id="f-severity" name="severity"
+              hx-get="/ui/drift/table" hx-target="#drift-table" hx-swap="outerHTML"
+              hx-include="#f-status, #f-sla">
+        <option value="">Tất cả</option>
+        {% for v in ["critical","high","medium","low"] %}
+        <option value="{{ v }}" {% if v == cur_severity %}selected{% endif %}>{{ v }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="f-sla">SLA</label>
+      <select class="input" id="f-sla" name="sla"
+              hx-get="/ui/drift/table" hx-target="#drift-table" hx-swap="outerHTML"
+              hx-include="#f-status, #f-severity">
+        <option value="">Tất cả</option>
+        <option value="breached" {% if cur_sla == "breached" %}selected{% endif %}>Chỉ quá hạn</option>
+        <option value="ok" {% if cur_sla == "ok" %}selected{% endif %}>Chỉ còn hạn</option>
+      </select>
+    </div>
+  </div>
+
+  {% include "_drift_table.html" %}
+</div>
+{% endblock %}

@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+{% import "_icons.html" as ico %}
+{% block title %}Quản lý IP · SysOps Portal{% endblock %}
+{% block topbar %}Quản lý IP{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="crumbs"><span>SysOps</span><span>/</span><span class="cur">Dải mạng</span></div>
+    <h2>Quản lý IP</h2>
+  </div>
+  <form class="form-row" method="get" action="/ip">
+    <div class="field">
+      <label for="cidrSel">Dải mạng</label>
+      <select class="input" id="cidrSel" name="cidr" onchange="this.form.submit()">
+        {% for s in subnets %}
+        <option value="{{ s.cidr }}" {% if s.cidr == current_cidr %}selected{% endif %}>
+          {{ s.cidr }}{% if s.name %} — {{ s.name }}{% endif %}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    <noscript><button class="btn btn-ghost" type="submit">Xem</button></noscript>
+  </form>
+</div>
+
+{% if not subnets %}
+{# Trạng thái đầu tiên người dùng gặp trên một cơ sở dữ liệu mới. Nói rõ phải
+   làm gì tiếp theo, thay vì hiện một bản đồ rỗng với các con số trống. #}
+<div class="card center" style="padding:var(--margin-xl)">
+  <div style="max-width:520px;margin:0 auto">
+    <h3 style="margin-bottom:8px">Chưa khai báo dải mạng nào</h3>
+    <p class="t-body-md muted">
+      Portal cần biết các dải mạng trước khi làm được bất cứ việc gì. Khai báo
+      dải đầu tiên qua API — nhớ điền <b>gateway</b> và <b>reserved_ranges</b>,
+      vì nếu thiếu thì thuật toán sẽ gợi ý nhầm vào địa chỉ hạ tầng.
+    </p>
+    <div class="tag-mono" style="display:block;text-align:left;padding:12px;line-height:18px;white-space:pre-wrap">POST /api/v1/subnets
+{
+  "cidr": "10.0.76.0/24",
+  "name": "Dải VM dự án",
+  "gateway": "10.0.76.254",
+  "reserved_ranges": [
+    {"start": "10.0.76.1", "end": "10.0.76.4",
+     "reason": "gateway, firewall, switch"}
+  ]
+}</div>
+    <p class="t-label-sm muted" style="margin-top:var(--margin-md)">
+      Hoặc nhập từ 3 Google Sheet hiện tại bằng <span class="mono">importer.py</span>.
+    </p>
+  </div>
+</div>
+
+{% else %}
+<div class="grid12">
+
+  {# --- Bản đồ IP (8 cột) --- #}
+  <div class="card col-8">
+    <div class="card-head" style="align-items:flex-end">
+      <div>
+        <h3 class="row gap-sm" style="gap:8px">
+          <span style="color:var(--secondary);display:inline-flex">{{ ico.icon("grid_view") }}</span>
+          Bản đồ trực quan
+          <span class="tag-mono">{{ stats.cidr }}</span>
+        </h3>
+        <div class="t-label-sm muted" style="margin-top:4px">
+          {{ stats.name }} · {{ stats.total }} địa chỉ · dùng được {{ stats.usable }}
+        </div>
+      </div>
+      <div class="legend">
+        <span><i style="background:var(--secondary)"></i>Đã cấp ({{ stats.allocated }})</span>
+        <span><i style="background:var(--surface-variant)"></i>Trống ({{ stats.free }})</span>
+        <span><i style="background:#e0a02a"></i>Cách ly ({{ stats.quarantine }})</span>
+        <span><i style="background:var(--error)"></i>Xung đột ({{ stats.conflict }})</span>
+        <span><i style="background:var(--tertiary-container)"></i>Hạ tầng</span>
+      </div>
+    </div>
+
+    {% if scanner_warning %}
+    <div class="banner banner-warn">
+      {{ ico.icon("warning") }}
+      <div><b>Dữ liệu quét không tươi</b>{{ scanner_warning }}</div>
+    </div>
+    {% endif %}
+
+    <div class="ip-panel">
+      <div class="ip-grid">
+        {% for a in addresses %}
+        <div class="ip-cell s-{{ a.status }}{% if a.unusable_reason %} s-reserved{% endif %}"
+             role="button" tabindex="0"
+             aria-label="{{ a.address }} — {{ a.status }}"
+             hx-get="/ui/ip/{{ a.address }}"
+             hx-target="#drawer-slot" hx-swap="innerHTML"
+             hx-trigger="click, keyup[key=='Enter']">
+          <span class="tip">{{ a.address }} — {{ a.status }}{% if a.device %} — {{ a.device.name }}{% endif %}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  {# --- Gợi ý IP (4 cột) --- #}
+  <div class="card col-4">
+    <h3 style="margin-bottom:var(--margin-md)">Gợi ý IP trống</h3>
+    <form hx-post="/ui/suggest" hx-target="#sug" hx-swap="innerHTML">
+      <input type="hidden" name="subnet" value="{{ current_cidr }}">
+      <div class="stack gap-sm">
+        <div class="field">
+          <label>Đơn vị</label>
+          <input class="input" name="department" placeholder="SDC11">
+        </div>
+        <div class="field">
+          <label>Dự án</label>
+          <input class="input" name="project" placeholder="NIGHTLIFE">
+        </div>
+        <div class="form-row">
+          <div class="field" style="flex:1">
+            <label>Số lượng</label>
+            <input class="input" name="quantity" type="number" value="1" min="1" max="32">
+          </div>
+          <div class="field" style="flex:1">
+            <label>Liên tiếp</label>
+            <select class="input" name="contiguous">
+              <option value="false">Không</option>
+              <option value="true">Có</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-block" type="submit">{{ ico.icon("search") }}Tìm IP</button>
+      </div>
+    </form>
+    <div id="sug" style="margin-top:var(--margin-md)"></div>
+  </div>
+
+  {# --- Danh mục subnet (12 cột) --- #}
+  <div class="card-flat col-12">
+    <div class="table-head">
+      <h3>Danh mục dải mạng</h3>
+    </div>
+    <div class="table-wrap">
+      <table class="data">
+        <thead>
+          <tr>
+            <th>CIDR</th><th>Tên</th><th>Chính sách</th>
+            <th>Sử dụng</th><th>Trạng thái</th><th>Scanner</th><th class="right">Xung đột</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for s in subnets %}
+          <tr>
+            <td class="ip">{{ s.cidr }}</td>
+            <td>
+              <div class="cell-title">{{ s.name or "—" }}</div>
+              <div class="cell-sub">cách ly {{ s.cooldown_days }} ngày</div>
+            </td>
+            <td class="cell-sub">{{ s.allocation_policy }}</td>
+            <td>
+              <div class="row gap-sm">
+                <div class="bar" style="width:64px">
+                  <span class="{{ 'b-error' if s.utilization > 0.85 else '' }}"
+                        style="width: {{ (s.utilization * 100) | round | int }}%"></span>
+                </div>
+                <span class="mono">{{ (s.utilization * 100) | round | int }}%</span>
+              </div>
+            </td>
+            <td>
+              {% if s.exhaustion_warning %}
+              <span class="chip chip-warn"><span class="dot"></span>Sắp cạn</span>
+              {% else %}
+              <span class="chip chip-ok"><span class="dot"></span>Bình thường</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if s.scanner_warning %}
+              <span class="chip chip-error"><span class="dot"></span>Cũ</span>
+              {% else %}
+              <span class="chip chip-ok"><span class="dot"></span>Tươi</span>
+              {% endif %}
+            </td>
+            <td class="right">
+              {% if s.conflict %}
+              <span class="chip chip-error">{{ s.conflict }}</span>
+              {% else %}<span class="muted">0</span>{% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endif %}
+{% endblock %}

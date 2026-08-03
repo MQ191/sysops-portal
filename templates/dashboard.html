@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% import "_icons.html" as ico %}
+{% block title %}Bảng điều khiển · SysOps Portal{% endblock %}
+{% block topbar %}Quản lý IP &amp; Vòng đời VM{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="crumbs"><span>SysOps</span><span>/</span><span class="cur">Bảng điều khiển</span></div>
+    <h2>Tổng quan hệ thống</h2>
+    <div class="page-sub">Số liệu thực tế về hạ tầng mạng và sức khoẻ vận hành.</div>
+  </div>
+</div>
+
+<div class="grid12">
+
+  {# --- Bốn thẻ metric --- #}
+  <div class="card metric col-3">
+    <div class="metric-top">
+      <div class="metric-icon i-primary">{{ ico.icon("devices") }}</div>
+      <h3 class="metric-label">Tổng thiết bị</h3>
+    </div>
+    <div>
+      <div class="metric-value">{{ stats.total_devices }}</div>
+      <div class="metric-note">VM và máy chủ vật lý đã khai báo</div>
+    </div>
+  </div>
+
+  <div class="card metric col-3">
+    <div class="metric-top">
+      <div class="metric-icon i-secondary">{{ ico.icon("data_usage") }}</div>
+      <h3 class="metric-label">Cấp phát IP</h3>
+    </div>
+    <div>
+      <div class="row" style="align-items:flex-end;gap:8px;margin-bottom:8px">
+        <div class="metric-value">{{ stats.utilization_pct }}%</div>
+        <div class="t-label-sm muted" style="padding-bottom:6px">
+          {{ stats.allocated }}/{{ stats.usable }} địa chỉ
+        </div>
+      </div>
+      <div class="bar">
+        <span class="{{ 'b-error' if stats.utilization_pct > 85 else '' }}"
+              style="width: {{ stats.utilization_pct }}%"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card metric col-3">
+    <div class="metric-top">
+      <div class="metric-icon i-dim">{{ ico.icon("radar") }}</div>
+      <h3 class="metric-label">Trạng thái quét</h3>
+    </div>
+    <div>
+      {% if scanner.healthy %}
+      <div class="t-headline-sm row gap-sm" style="color:var(--primary)">
+        Đang hoạt động <span class="pulse"></span>
+      </div>
+      <div class="metric-note">
+        {% if scanner.last_ok_hours is not none %}
+        Lần quét gần nhất: {{ scanner.last_ok_hours }} giờ trước
+        {% else %}Chưa có dữ liệu{% endif %}
+      </div>
+      {% else %}
+      <div class="t-headline-sm" style="color:var(--error)">Dữ liệu cũ</div>
+      <div class="metric-note">
+        {{ scanner.stale_subnets }}/{{ scanner.total_subnets }} dải không có dữ liệu tươi
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card metric col-3 {{ 'is-alert' if stats.critical_drift else '' }}">
+    <div class="metric-top">
+      <div class="metric-icon {{ 'i-error' if stats.critical_drift else 'i-primary' }}">
+        {{ ico.icon("warning") }}
+      </div>
+      <h3 class="metric-label">Cảnh báo nghiêm trọng</h3>
+    </div>
+    <div>
+      <div class="metric-value">{{ stats.critical_drift }}</div>
+      <div class="metric-note">
+        {% if stats.critical_drift %}Yêu cầu xử lý ngay
+        {% else %}Không có lệch mức critical/high{% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# --- Phân bổ subnet --- #}
+  <div class="card col-8">
+    <div class="card-head">
+      <h3>Phân bổ dải mạng</h3>
+      <a class="btn btn-quiet" href="/ip">Xem tất cả</a>
+    </div>
+    <div class="stack gap-md">
+      {% for s in subnets %}
+      <a class="subnet-row" href="/ip?cidr={{ s.cidr | urlencode }}" style="display:block">
+        <div class="subnet-row-top">
+          <div class="row gap-sm" style="gap:12px">
+            <span class="tag-mono">{{ s.cidr }}</span>
+            <span class="t-label-md">{{ s.name }}</span>
+          </div>
+          {% if s.scanner_warning %}
+          <span class="chip chip-error"><span class="dot"></span>Scanner cũ</span>
+          {% elif s.exhaustion_warning %}
+          <span class="chip chip-warn"><span class="dot"></span>Sắp cạn</span>
+          {% elif s.conflict %}
+          <span class="chip chip-error"><span class="dot"></span>{{ s.conflict }} xung đột</span>
+          {% else %}
+          <span class="chip chip-ok"><span class="dot"></span>Bình thường</span>
+          {% endif %}
+        </div>
+        <div class="row gap-md">
+          <div class="bar thick" style="flex:1">
+            <span class="{{ 'b-error' if s.utilization > 0.85 else 'b-primary' }}"
+                  style="width: {{ (s.utilization * 100) | round | int }}%"></span>
+          </div>
+          <div class="t-label-sm" style="width:80px;text-align:right">
+            {{ (s.utilization * 100) | round | int }}% · {{ s.allocated }}/{{ s.usable }}
+          </div>
+        </div>
+      </a>
+      {% else %}
+      <div class="empty">Chưa khai báo dải mạng nào.</div>
+      {% endfor %}
+    </div>
+  </div>
+
+  {# --- Thao tác nhanh + chất lượng dữ liệu --- #}
+  <div class="card col-4 stack">
+    <h3 style="margin-bottom:var(--margin-lg)">Thao tác nhanh</h3>
+    <div class="stack gap-sm">
+      <a class="btn btn-primary btn-block" href="/ip">{{ ico.icon("add_circle") }}Cấp IP mới</a>
+      <a class="btn btn-ghost btn-block" href="/vm">{{ ico.icon("dns") }}Xem vòng đời VM</a>
+    </div>
+
+    <div class="mt-auto" style="padding-top:var(--margin-lg);border-top:1px solid var(--surface-variant);margin-top:var(--margin-lg)">
+      <div class="t-label-sm muted" style="margin-bottom:8px">Chất lượng dữ liệu</div>
+      <table class="kv">
+        <tr><th>Có người đứng tên</th><td>{{ stats.has_owner_pct }}%</td></tr>
+        <tr><th>Có hạn dùng</th><td>{{ stats.has_expiry_pct }}%</td></tr>
+        <tr><th>Lệch đang mở</th><td>{{ stats.open_drift }}</td></tr>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

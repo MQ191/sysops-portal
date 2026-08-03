@@ -1,0 +1,718 @@
+/* ==========================================================================
+   Proton Enterprise — design system cho SysOps Portal
+   Nguồn: Stitch project "SysOps Unified Resource Portal" (DESIGN.md)
+
+   Viết bằng CSS thuần thay vì Tailwind CDN có chủ đích: portal chạy trong
+   mạng nội bộ/VPN không có internet, nên mọi phụ thuộc CDN sẽ làm hỏng giao
+   diện đúng lúc cần dùng nhất. Toàn bộ token màu / type scale / spacing /
+   radius bên dưới lấy nguyên giá trị từ design system.
+   ========================================================================== */
+
+:root {
+  /* --- Surface & tonal layering --- */
+  --surface: #f8f9ff;
+  --surface-dim: #d8dadf;
+  --surface-bright: #f8f9ff;
+  --surface-container-lowest: #ffffff;
+  --surface-container-low: #f2f3f9;
+  --surface-container: #eceef3;
+  --surface-container-high: #e6e8ed;
+  --surface-container-highest: #e1e2e8;
+  --surface-variant: #e1e2e8;
+  --on-surface: #191c20;
+  --on-surface-variant: #464554;
+  --inverse-surface: #2e3135;
+  --inverse-on-surface: #eff0f6;
+  --outline: #777585;
+  --outline-variant: #c7c4d6;
+  --background: #f8f9ff;
+  --on-background: #191c20;
+
+  /* --- Brand --- */
+  --primary: #4441c4;
+  --on-primary: #ffffff;
+  --primary-container: #5d5cde;
+  --on-primary-container: #f1eeff;
+  --primary-fixed: #e2dfff;
+  --primary-fixed-dim: #c2c1ff;
+  --on-primary-fixed: #0b006b;
+  --inverse-primary: #c2c1ff;
+
+  --secondary: #005cba;
+  --on-secondary: #ffffff;
+  --secondary-container: #4b92fd;
+  --on-secondary-container: #002b5d;
+  --secondary-fixed: #d7e3ff;
+  --secondary-fixed-dim: #abc7ff;
+  --on-secondary-fixed: #001b3f;
+
+  --tertiary: #525558;
+  --on-tertiary: #ffffff;
+  --tertiary-container: #6b6d71;
+  --on-tertiary-container: #eff0f4;
+
+  --error: #ba1a1a;
+  --on-error: #ffffff;
+  --error-container: #ffdad6;
+  --on-error-container: #93000a;
+
+  /* Trạng thái vận hành — design system §Colors yêu cầu xanh/hổ phách/đỏ
+     bão hoà cao cho sức khoẻ hệ thống. Không có trong bảng màu Material nên
+     khai báo riêng ở đây. */
+  --ok: #1c6b3c;
+  --ok-container: #dcf0e3;
+  --warn: #8a6410;
+  --warn-container: #fdf0d5;
+
+  /* --- Spacing (8pt grid, cho phép 4pt ở vùng mật độ cao) --- */
+  --base: 4px;
+  --margin-sm: 8px;
+  --gutter: 16px;
+  --margin-md: 16px;
+  --margin-lg: 24px;
+  --margin-xl: 32px;
+  --container-padding: 24px;
+  --sidebar-w: 260px;
+  --topbar-h: 64px;
+
+  /* --- Radius --- */
+  --r-sm: 0.25rem;
+  --r: 0.5rem;
+  --r-md: 0.75rem;
+  --r-lg: 1rem;
+  --r-xl: 1.5rem;
+  --r-card: 24px;
+  --r-full: 9999px;
+
+  /* --- Elevation --- */
+  --shadow-soft: 0 4px 12px rgba(0, 0, 0, 0.04);
+  --shadow-modal: 0 8px 24px rgba(0, 0, 0, 0.1);
+
+  /* --- Font stack ---
+     Design system chỉ định Inter + JetBrains Mono. Không nhúng file font từ
+     Google Fonts vì hai lý do: portal chạy offline, và 4 weight Inter dạng
+     TTF nặng vài MB. Segoe UI (mặc định trên Windows — môi trường của đội
+     System) gần Inter về metrics; nếu máy nào cài sẵn Inter thì tự dùng. */
+  --font-ui: Inter, "Segoe UI Variable Text", "Segoe UI", system-ui,
+    -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Mono", Consolas, ui-monospace,
+    "SF Mono", Menlo, monospace;
+}
+
+/* ==========================================================================
+   Type scale
+   ========================================================================== */
+
+.t-display-lg { font-size: 32px; line-height: 40px; font-weight: 700; letter-spacing: -0.02em; }
+.t-headline-md { font-size: 24px; line-height: 32px; font-weight: 600; letter-spacing: -0.01em; }
+.t-headline-sm { font-size: 20px; line-height: 28px; font-weight: 600; }
+.t-body-lg { font-size: 16px; line-height: 24px; font-weight: 400; }
+.t-body-md { font-size: 14px; line-height: 20px; font-weight: 400; }
+.t-label-md { font-size: 13px; line-height: 18px; font-weight: 600; }
+.t-label-sm { font-size: 12px; line-height: 16px; font-weight: 500; }
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
+}
+
+/* ==========================================================================
+   Reset & khung trang
+   ========================================================================== */
+
+* { box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--on-background);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  line-height: 20px;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: inherit; text-decoration: none; }
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--surface-dim); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #c5c6ca; }
+
+.layout { display: flex; min-height: 100%; }
+
+/* --- Sidebar 260px cố định --- */
+.sidebar {
+  position: fixed;
+  left: 0; top: 0;
+  width: var(--sidebar-w);
+  height: 100%;
+  background: var(--surface-container);
+  border-right: 1px solid var(--surface-variant);
+  display: flex;
+  flex-direction: column;
+  padding: var(--container-padding) 0;
+  z-index: 20;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+  margin-bottom: var(--margin-xl);
+}
+
+.brand-mark {
+  width: 40px; height: 40px;
+  border-radius: var(--r-full);
+  background: var(--primary);
+  color: var(--on-primary);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 17px;
+  flex-shrink: 0;
+}
+
+.brand-name { color: var(--primary); font-weight: 700; font-size: 20px; line-height: 1; }
+.brand-sub { color: var(--on-surface-variant); font-size: 12px; line-height: 16px; font-weight: 500; }
+
+.nav { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; padding: 0 8px; }
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  color: var(--on-surface-variant);
+  border-radius: 0 var(--r-full) var(--r-full) 0;
+  border-left: 4px solid transparent;
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 600;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.nav-item:hover { background: var(--surface-container-high); }
+
+/* Active state theo design system: nền secondary-container + thanh dọc
+   primary bên trái, thay vì tăng độ nổi. */
+.nav-item.is-active {
+  background: var(--secondary-container);
+  color: var(--on-secondary-container);
+  border-left-color: var(--primary);
+}
+
+.nav-item svg { width: 20px; height: 20px; flex-shrink: 0; }
+
+.sidebar-foot {
+  margin-top: auto;
+  padding: var(--margin-lg) var(--margin-lg) 0;
+  border-top: 1px solid var(--surface-variant);
+}
+
+.who-name { font-size: 13px; font-weight: 600; color: var(--on-surface); }
+.who-role { font-size: 12px; font-weight: 500; color: var(--on-surface-variant); }
+
+/* --- Main canvas --- */
+.main { flex: 1; margin-left: var(--sidebar-w); display: flex; flex-direction: column; min-width: 0; }
+
+.topbar {
+  height: var(--topbar-h);
+  background: var(--surface-container-lowest);
+  border-bottom: 1px solid var(--surface-variant);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--container-padding);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.topbar h1 { margin: 0; font-size: 24px; line-height: 32px; font-weight: 700; letter-spacing: -0.01em; color: var(--primary); }
+
+.canvas { padding: var(--container-padding); }
+
+/* --- Breadcrumbs + page header --- */
+.crumbs { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 500; color: var(--on-surface-variant); margin-bottom: 4px; }
+.crumbs .cur { color: var(--primary); font-weight: 600; }
+
+.page-head { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: var(--margin-lg); gap: var(--margin-md); flex-wrap: wrap; }
+.page-head h2 { margin: 0; font-size: 32px; line-height: 40px; font-weight: 700; letter-spacing: -0.02em; }
+.page-sub { color: var(--on-surface-variant); font-size: 14px; margin-top: 4px; }
+
+/* ==========================================================================
+   Grid 12 cột, gutter 24px
+   ========================================================================== */
+
+.grid12 { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: var(--margin-lg); }
+
+.col-3  { grid-column: span 3; }
+.col-4  { grid-column: span 4; }
+.col-6  { grid-column: span 6; }
+.col-8  { grid-column: span 8; }
+.col-12 { grid-column: span 12; }
+
+@media (max-width: 1100px) {
+  .col-3, .col-4, .col-6, .col-8 { grid-column: span 12; }
+}
+
+@media (max-width: 860px) {
+  .sidebar { display: none; }
+  .main { margin-left: 0; }
+}
+
+/* ==========================================================================
+   Card
+   ========================================================================== */
+
+.card {
+  background: var(--surface-container-lowest);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-soft);
+  padding: var(--container-padding);
+}
+
+.card-flat { background: var(--surface-container-lowest); border-radius: var(--r-xl); box-shadow: var(--shadow-soft); overflow: hidden; }
+
+.card h3 { margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; color: var(--on-surface); }
+
+.card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--margin-lg); gap: var(--margin-md); }
+
+/* --- Metric tile (bento) --- */
+.metric { display: flex; flex-direction: column; justify-content: space-between; min-height: 148px; }
+.metric-top { display: flex; align-items: center; gap: 12px; margin-bottom: var(--margin-md); }
+
+.metric-icon {
+  width: 32px; height: 32px;
+  border-radius: var(--r-full);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.metric-icon svg { width: 18px; height: 18px; }
+.metric-icon.i-primary { background: var(--primary-fixed); color: var(--on-primary-fixed); }
+.metric-icon.i-secondary { background: var(--secondary-fixed); color: var(--on-secondary-fixed); }
+.metric-icon.i-dim { background: var(--primary-fixed-dim); color: var(--on-primary-fixed); }
+.metric-icon.i-error { background: var(--error); color: var(--on-error); }
+
+.metric-label { font-size: 13px; line-height: 18px; font-weight: 700; color: var(--on-surface-variant); margin: 0; }
+.metric-value { font-size: 32px; line-height: 40px; font-weight: 700; letter-spacing: -0.02em; color: var(--on-surface); }
+.metric-note { font-size: 12px; line-height: 16px; font-weight: 500; color: var(--tertiary); margin-top: 4px; }
+
+.metric.is-alert { background: var(--error-container); border: 1px solid rgba(186, 26, 26, 0.2); }
+.metric.is-alert .metric-label,
+.metric.is-alert .metric-value { color: var(--on-error-container); }
+.metric.is-alert .metric-note { color: rgba(147, 0, 10, 0.8); }
+
+/* Chấm nhịp cho trạng thái đang chạy */
+.pulse { position: relative; display: inline-flex; width: 12px; height: 12px; }
+.pulse::before {
+  content: ""; position: absolute; inset: 0;
+  border-radius: var(--r-full); background: currentColor; opacity: 0.75;
+  animation: ping 1.4s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+.pulse::after { content: ""; position: relative; width: 12px; height: 12px; border-radius: var(--r-full); background: currentColor; }
+@keyframes ping { 75%, 100% { transform: scale(2); opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse::before { animation: none; }
+}
+
+/* ==========================================================================
+   Progress bar
+   ========================================================================== */
+
+.bar { height: 4px; background: var(--surface-container-high); border-radius: var(--r-full); overflow: hidden; width: 100%; }
+.bar > span { display: block; height: 100%; border-radius: var(--r-full); background: var(--secondary); }
+.bar.thick { height: 8px; }
+.bar > span.b-primary { background: var(--primary); }
+.bar > span.b-warn { background: var(--warn); }
+.bar > span.b-error { background: var(--error); }
+
+/* ==========================================================================
+   Button
+   ========================================================================== */
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 10px 16px;
+  border-radius: var(--r);
+  border: 1px solid transparent;
+  font-family: inherit;
+  font-size: 13px; line-height: 18px; font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+.btn svg { width: 18px; height: 18px; }
+
+.btn-primary { background: var(--primary); color: var(--on-primary); }
+.btn-primary:hover { background: #3b38ad; }
+
+.btn-ghost { background: transparent; border-color: var(--primary); color: var(--primary); }
+.btn-ghost:hover { background: var(--surface-container-low); }
+
+.btn-quiet { background: transparent; color: var(--primary); }
+.btn-quiet:hover { background: var(--primary-fixed); }
+
+.btn-block { width: 100%; padding: 12px 16px; }
+
+/* ==========================================================================
+   Form
+   ========================================================================== */
+
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field > label { font-size: 12px; line-height: 16px; font-weight: 500; color: var(--on-surface-variant); }
+
+.input, select.input {
+  height: 40px;
+  padding: 0 12px;
+  border-radius: var(--r);
+  border: 1px solid var(--outline-variant);
+  background: var(--surface-container-lowest);
+  color: var(--on-surface);
+  font-family: inherit;
+  font-size: 14px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.input:focus, select.input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(68, 65, 196, 0.18);
+}
+
+.form-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+
+/* ==========================================================================
+   Chip / status pill
+   ========================================================================== */
+
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 2px 10px;
+  border-radius: var(--r-full);
+  font-size: 12px; line-height: 16px; font-weight: 500;
+  white-space: nowrap;
+}
+.chip .dot { width: 6px; height: 6px; border-radius: var(--r-full); background: currentColor; flex-shrink: 0; }
+
+.chip-ok { background: var(--ok-container); color: var(--ok); }
+.chip-warn { background: var(--warn-container); color: var(--warn); }
+.chip-error { background: var(--error-container); color: var(--on-error-container); }
+.chip-neutral { background: var(--surface-container-high); color: var(--on-surface-variant); }
+.chip-primary { background: var(--primary-fixed); color: var(--on-primary-fixed); }
+
+.tag-mono {
+  display: inline-block;
+  background: var(--surface-variant);
+  color: var(--on-surface);
+  padding: 2px 8px;
+  border-radius: var(--r-sm);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* ==========================================================================
+   Banner
+   ========================================================================== */
+
+.banner {
+  border-radius: var(--r-md);
+  padding: 12px 16px;
+  margin-bottom: var(--margin-md);
+  font-size: 13px;
+  line-height: 18px;
+  border: 1px solid;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.banner svg { width: 20px; height: 20px; flex-shrink: 0; margin-top: 1px; }
+.banner b { display: block; margin-bottom: 2px; font-weight: 700; }
+.banner-danger { background: var(--error-container); border-color: rgba(186, 26, 26, 0.35); color: var(--on-error-container); }
+.banner-warn { background: var(--warn-container); border-color: #e8d0a0; color: var(--warn); }
+
+/* ==========================================================================
+   Data table
+   ========================================================================== */
+
+.table-wrap { overflow-x: auto; }
+
+table.data { width: 100%; border-collapse: collapse; text-align: left; }
+
+table.data thead th {
+  position: sticky; top: 0;
+  background: var(--surface-container);
+  color: var(--on-surface-variant);
+  font-size: 12px; line-height: 16px; font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--outline-variant);
+  white-space: nowrap;
+}
+
+table.data tbody td { padding: 10px 16px; border-top: 1px solid var(--outline-variant); font-size: 14px; vertical-align: middle; }
+table.data tbody tr { height: 64px; border-left: 2px solid transparent; transition: background-color 0.15s, border-color 0.15s; }
+table.data tbody tr:hover { background: var(--surface-container-low); border-left-color: var(--primary); }
+table.data td.num, table.data td.ip { font-family: var(--font-mono); font-size: 12px; font-weight: 500; }
+table.data .cell-title { font-weight: 500; }
+table.data .cell-sub { font-size: 12px; line-height: 16px; color: var(--on-surface-variant); }
+
+.table-head {
+  padding: var(--margin-md);
+  border-bottom: 1px solid var(--outline-variant);
+  background: var(--surface-bright);
+  display: flex; justify-content: space-between; align-items: center; gap: var(--margin-md);
+}
+.table-head h3 { margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; }
+
+/* Bảng key/value gọn — dùng cho chất lượng dữ liệu */
+table.kv { width: 100%; border-collapse: collapse; }
+table.kv th { text-align: left; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--on-surface-variant); padding: 10px 0; border-bottom: 1px solid var(--surface-variant); }
+table.kv td { text-align: right; padding: 10px 0; border-bottom: 1px solid var(--surface-variant); font-weight: 600; }
+table.kv tr:last-child th, table.kv tr:last-child td { border-bottom: 0; }
+
+/* ==========================================================================
+   Bản đồ IP — grid 16 cột, ô vuông 2px radius
+   ========================================================================== */
+
+.ip-panel {
+  background: var(--surface-container-lowest);
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--r);
+  padding: 16px;
+}
+
+.ip-grid { display: grid; grid-template-columns: repeat(16, 1fr); gap: 4px; }
+
+.ip-cell {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 2px;
+  position: relative;
+  cursor: pointer;
+  transition: box-shadow 0.075s;
+  background: var(--surface-variant);
+}
+.ip-cell:hover { box-shadow: 0 0 0 2px var(--primary); z-index: 5; }
+
+.ip-cell.s-allocated { background: var(--secondary); }
+.ip-cell.s-free      { background: var(--surface-variant); }
+.ip-cell.s-conflict  { background: var(--error); }
+.ip-cell.s-reserved  { background: var(--tertiary-container); }
+.ip-cell.s-quarantine { background: #e0a02a; }
+.ip-cell.s-blocked   { background: var(--outline); }
+
+/* Tooltip thuần CSS — không cần JS, và nội dung đi qua autoescape của Jinja */
+.ip-cell .tip {
+  position: absolute;
+  bottom: 100%; left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 4px;
+  padding: 4px 8px;
+  background: var(--inverse-surface);
+  color: var(--inverse-on-surface);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 14px;
+  border-radius: var(--r-sm);
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s;
+  z-index: 30;
+}
+.ip-cell:hover .tip { opacity: 1; }
+
+.legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; font-weight: 500; color: var(--on-surface-variant); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 10px; height: 10px; border-radius: 1px; display: inline-block; }
+
+/* ==========================================================================
+   Panel gợi ý IP
+   ========================================================================== */
+
+.sug {
+  border: 1px solid var(--surface-variant);
+  border-left: 3px solid var(--primary);
+  border-radius: var(--r);
+  padding: 12px 16px;
+  margin-bottom: 10px;
+  background: var(--surface-container-lowest);
+}
+.sug-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.sug-addr { font-family: var(--font-mono); font-size: 16px; font-weight: 500; color: var(--on-surface); }
+.sug-score { margin-left: auto; font-size: 12px; font-weight: 500; color: var(--outline); }
+.sug ul { margin: 8px 0 0; padding-left: 18px; }
+.sug li { font-size: 13px; line-height: 20px; color: var(--on-surface-variant); }
+.sug ul.warn li { color: var(--on-error-container); }
+.sug.is-empty { border-left-color: var(--error); }
+
+/* --- Subnet row (dashboard) --- */
+.subnet-row {
+  border: 1px solid var(--surface-variant);
+  border-radius: var(--r-md);
+  padding: var(--margin-md);
+  transition: border-color 0.15s;
+}
+.subnet-row:hover { border-color: var(--primary); }
+.subnet-row-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 12px; }
+
+/* ==========================================================================
+   Drawer chi tiết IP + modal
+   ========================================================================== */
+
+.scrim {
+  position: fixed; inset: 0;
+  background: rgba(25, 28, 32, 0.35);
+  backdrop-filter: blur(8px);
+  z-index: 40;
+  display: flex; align-items: center; justify-content: center;
+  padding: var(--margin-lg);
+}
+
+.modal {
+  background: var(--surface-container-lowest);
+  border-radius: var(--r-xl);
+  box-shadow: var(--shadow-modal);
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-head {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  gap: var(--margin-md);
+  padding: var(--margin-lg) var(--margin-lg) var(--margin-md);
+  border-bottom: 1px solid var(--surface-variant);
+}
+.modal-head h3 { margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; }
+.modal-head .sub { font-size: 12px; color: var(--on-surface-variant); margin-top: 4px; }
+
+.modal-body { padding: var(--margin-lg); }
+.modal-foot {
+  padding: var(--margin-md) var(--margin-lg) var(--margin-lg);
+  display: flex; gap: 12px; justify-content: flex-end;
+  border-top: 1px solid var(--surface-variant);
+}
+
+.icon-btn {
+  background: transparent; border: 0; cursor: pointer;
+  width: 32px; height: 32px; border-radius: var(--r-full);
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--on-surface-variant);
+  font-size: 20px; line-height: 1;
+  transition: background-color 0.15s;
+}
+.icon-btn:hover { background: var(--surface-container); }
+
+/* Bảng thuộc tính trong drawer */
+.props { width: 100%; border-collapse: collapse; }
+.props th {
+  text-align: left; font-size: 12px; font-weight: 500;
+  color: var(--on-surface-variant); padding: 8px 0; width: 42%;
+  vertical-align: top;
+}
+.props td { padding: 8px 0; font-size: 13px; font-weight: 500; word-break: break-word; }
+.props tr + tr th, .props tr + tr td { border-top: 1px solid var(--surface-variant); }
+
+/* ==========================================================================
+   Toast
+   ========================================================================== */
+
+#toasts {
+  position: fixed; right: var(--margin-lg); bottom: var(--margin-lg);
+  z-index: 60; display: flex; flex-direction: column; gap: 10px;
+  max-width: 420px;
+}
+
+.toast {
+  background: var(--inverse-surface);
+  color: var(--inverse-on-surface);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-modal);
+  padding: 12px 16px;
+  font-size: 13px;
+  line-height: 18px;
+  display: flex; gap: 10px; align-items: flex-start;
+  border-left: 4px solid var(--primary);
+  animation: toast-in 0.18s ease-out;
+}
+.toast b { display: block; margin-bottom: 2px; }
+.toast.is-ok { border-left-color: #6bd48f; }
+.toast.is-error { border-left-color: #ff8a80; }
+.toast .close { margin-left: auto; cursor: pointer; opacity: 0.6; }
+.toast .close:hover { opacity: 1; }
+
+@keyframes toast-in { from { transform: translateY(8px); opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) { .toast { animation: none; } }
+
+/* ==========================================================================
+   Ô IP có thể chọn
+   ========================================================================== */
+
+.ip-cell.is-picked { box-shadow: 0 0 0 2px var(--on-surface); z-index: 6; }
+
+/* Chỉ báo HTMX đang chạy */
+.htmx-request .btn { opacity: 0.6; pointer-events: none; }
+.spin { display: none; }
+.htmx-request .spin { display: inline-block; }
+.htmx-request .spin::after {
+  content: ""; display: inline-block; width: 12px; height: 12px;
+  border: 2px solid currentColor; border-right-color: transparent;
+  border-radius: 50%; animation: spin 0.6s linear infinite; vertical-align: -2px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ==========================================================================
+   Trang đăng nhập
+   ========================================================================== */
+
+.login-wrap {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  padding: var(--margin-lg); background: var(--background);
+}
+.login-card { width: 100%; max-width: 400px; }
+.login-brand { display: flex; align-items: center; gap: 12px; margin-bottom: var(--margin-lg); }
+
+/* ==========================================================================
+   Thanh lọc
+   ========================================================================== */
+
+.filters {
+  display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end;
+  padding: var(--margin-md);
+  border-bottom: 1px solid var(--outline-variant);
+  background: var(--surface-bright);
+}
+.filters .grow { flex: 1; min-width: 200px; }
+
+.search-wrap { position: relative; }
+.search-wrap svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: var(--outline); pointer-events: none; }
+.search-wrap .input { padding-left: 38px; width: 100%; }
+
+.pager { display: flex; justify-content: space-between; align-items: center; padding: 12px var(--margin-md); border-top: 1px solid var(--outline-variant); }
+
+/* ==========================================================================
+   Tiện ích
+   ========================================================================== */
+
+.stack { display: flex; flex-direction: column; }
+.gap-sm { gap: 8px; }
+.gap-md { gap: 16px; }
+.gap-lg { gap: 24px; }
+.row { display: flex; align-items: center; }
+.between { justify-content: space-between; }
+.mt-auto { margin-top: auto; }
+.muted { color: var(--on-surface-variant); }
+.center { text-align: center; }
+.right { text-align: right; }
+.empty { color: var(--on-surface-variant); font-style: italic; padding: 16px 0; }

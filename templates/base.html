@@ -1,0 +1,112 @@
+{% import "_icons.html" as ico %}<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{% block title %}SysOps Portal{% endblock %}</title>
+{# HTMX và CSS đều nằm trong static/: portal chạy trong mạng nội bộ không có
+   internet, nên mọi phụ thuộc CDN sẽ hỏng đúng lúc cần dùng nhất. #}
+<link rel="stylesheet" href="/static/css/proton.css">
+<script src="/static/htmx.min.js" defer></script>
+</head>
+<body>
+<div class="layout">
+
+<nav class="sidebar">
+  <div class="brand">
+    <div class="brand-mark">S</div>
+    <div>
+      <div class="brand-name">SysOps</div>
+      <div class="brand-sub">IPAM &amp; vòng đời VM</div>
+    </div>
+  </div>
+
+  <div class="nav">
+    {% set nav_items = [
+      ("/",      "dashboard", "Bảng điều khiển"),
+      ("/ip",    "lan",       "Quản lý IP"),
+      ("/vm",    "dns",       "Vòng đời VM"),
+      ("/scan",  "radar",     "Quét mạng"),
+      ("/drift", "shield",    "Hàng đợi lệch"),
+      ("/audit", "history",   "Nhật ký hệ thống"),
+    ] %}
+    {% for href, name, label in nav_items %}
+    <a class="nav-item{% if href == active %} is-active{% endif %}" href="{{ href }}">
+      {{ ico.icon(name) }}<span>{{ label }}</span>
+    </a>
+    {% endfor %}
+  </div>
+
+  <div class="sidebar-foot">
+    <div class="row between gap-sm">
+      <div style="min-width:0">
+        <div class="who-name" style="overflow:hidden;text-overflow:ellipsis">{{ principal.email }}</div>
+        <div class="who-role">{{ principal.role }}{% if principal.via == 'dev' %} · chế độ dev{% endif %}</div>
+      </div>
+      <a class="icon-btn" href="/logout" title="Đăng xuất" aria-label="Đăng xuất">
+        {{ ico.icon("logout") }}
+      </a>
+    </div>
+  </div>
+</nav>
+
+<main class="main">
+  <header class="topbar">
+    <h1>{% block topbar %}Quản lý IP &amp; Vòng đời VM{% endblock %}</h1>
+    <div class="row gap-sm">
+      {% if scanner_alert %}
+      <span class="chip chip-error"><span class="dot"></span>{{ scanner_alert }}</span>
+      {% endif %}
+    </div>
+  </header>
+
+  <div class="canvas">
+    {% if insecure_mode %}
+    <div class="banner banner-danger">
+      {{ ico.icon("warning") }}
+      <div>
+        <b>Đang chạy ở chế độ xác thực dev</b>
+        Mọi request có thể tự khai danh tính qua HTTP header. Chỉ dùng để chạy
+        thử cục bộ — đặt AUTH_MODE=ldap hoặc token trước khi cho người khác truy cập.
+      </div>
+    </div>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+  </div>
+</main>
+
+</div>
+
+{# Nơi HTMX gắn drawer/modal, và ngăn xếp toast. Cả hai nằm ngoài .layout để
+   không bị ảnh hưởng bởi overflow hay stacking context của nội dung trang. #}
+<div id="drawer-slot"></div>
+<div id="toasts"></div>
+
+<script>
+  // Đóng drawer bằng phím Esc — thao tác bàn phím cơ bản mà thiếu thì rất bực.
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    var d = document.getElementById('drawer');
+    if (d) d.remove();
+  });
+
+  // Toast tự biến mất sau 6 giây; lỗi thì để lâu hơn vì người dùng cần đọc kỹ.
+  document.addEventListener('htmx:afterSwap', function () {
+    document.querySelectorAll('#toasts .toast:not([data-armed])').forEach(function (t) {
+      t.setAttribute('data-armed', '1');
+      setTimeout(function () { t.remove(); }, t.classList.contains('is-error') ? 12000 : 6000);
+    });
+  });
+
+  // Lỗi mạng hoặc 5xx không có thân phản hồi vẫn phải nói được gì đó.
+  document.addEventListener('htmx:responseError', function (e) {
+    var box = document.getElementById('toasts');
+    if (!box || (e.detail.xhr.responseText || '').indexOf('toast') !== -1) return;
+    var d = document.createElement('div');
+    d.className = 'toast is-error';
+    d.textContent = 'Yêu cầu thất bại (HTTP ' + e.detail.xhr.status + ').';
+    box.appendChild(d);
+  });
+</script>
+</body>
+</html>

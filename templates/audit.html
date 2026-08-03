@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Nhật ký hệ thống · SysOps Portal{% endblock %}
+{% block topbar %}Nhật ký hệ thống{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="crumbs"><span>SysOps</span><span>/</span><span class="cur">Nhật ký</span></div>
+    <h2>Nhật ký thay đổi</h2>
+    <div class="page-sub">
+      Ai, lúc nào, đổi gì. `actor` luôn lấy từ danh tính đã xác thực nên không
+      giả mạo được — đây là bằng chứng phục vụ ISO 27001.
+    </div>
+  </div>
+</div>
+
+<div class="card-flat">
+  <div class="table-head">
+    <h3>{{ entries | length }} bản ghi gần nhất</h3>
+  </div>
+  <div class="table-wrap">
+    <table class="data">
+      <thead>
+        <tr><th>Thời điểm</th><th>Người thực hiện</th><th>Hành động</th><th>Đối tượng</th><th>Thay đổi</th></tr>
+      </thead>
+      <tbody>
+      {% for a in entries %}
+        <tr>
+          <td class="cell-sub">{{ a.at }}</td>
+          <td class="cell-title">{{ a.actor }}</td>
+          <td><span class="chip chip-primary">{{ a.action }}</span></td>
+          <td>
+            <div class="cell-sub">{{ a.entity_type }}</div>
+            <div class="mono">{{ a.entity_id[:18] }}</div>
+          </td>
+          <td class="cell-sub">{{ a.changes }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="5" class="empty center">Chưa có bản ghi nào.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

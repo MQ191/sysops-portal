@@ -1,0 +1,66 @@
+{# Mảnh HTMX. Mọi giá trị đều đi qua autoescape của Jinja2 — đây chính là
+   thứ trước đây không có: f-string nối chuỗi trực tiếp khiến tên VM lấy từ
+   vCenter/CSV import trở thành vector XSS lưu trữ trong trình duyệt đội System. #}
+{% import "_icons.html" as ico %}
+
+{% if scanner_warning %}
+<div class="banner banner-danger">
+  {{ ico.icon("warning") }}
+  <div><b>Cảnh báo dữ liệu quét</b>{{ scanner_warning }}</div>
+</div>
+{% endif %}
+
+{% for b in blocks %}
+<div class="sug">
+  <div class="sug-head">
+    <span class="sug-addr">{{ b.addresses[0] }} – {{ b.addresses[-1] }}</span>
+    <span class="chip {{ b.confidence | conf_chip }}">
+      dải {{ b.addresses | length }} IP · {{ (b.confidence * 100) | round | int }}%
+    </span>
+  </div>
+  {% if b.warnings %}
+  <ul class="warn">{% for w in b.warnings %}<li>{{ w }}</li>{% endfor %}</ul>
+  {% endif %}
+</div>
+{% endfor %}
+
+{% for s in suggestions %}
+<div class="sug">
+  <div class="sug-head">
+    <span class="sug-addr">{{ s.address }}</span>
+    <span class="chip {{ s.confidence | conf_chip }}">
+      {{ s.confidence_label }} · {{ (s.confidence * 100) | round | int }}%
+    </span>
+    <span class="sug-score">điểm {{ s.score }}</span>
+  </div>
+  {% if s.reasons %}
+  <ul>{% for r in s.reasons %}<li>{{ r }}</li>{% endfor %}</ul>
+  {% endif %}
+  {% if s.warnings %}
+  <ul class="warn">{% for w in s.warnings %}<li>{{ w }}</li>{% endfor %}</ul>
+  {% endif %}
+  {% if can_allocate %}
+  <div class="row gap-sm" style="margin-top:10px">
+    <button class="btn btn-primary" style="padding:6px 14px"
+            hx-post="/ui/ip/{{ s.address }}/reserve"
+            hx-target="#drawer-slot" hx-swap="innerHTML">
+      Giữ chỗ &amp; cấp<span class="spin"></span>
+    </button>
+    <button class="btn btn-quiet" style="padding:6px 12px"
+            hx-get="/ui/ip/{{ s.address }}"
+            hx-target="#drawer-slot" hx-swap="innerHTML">Chi tiết</button>
+  </div>
+  {% endif %}
+</div>
+{% endfor %}
+
+{% if not suggestions and not blocks %}
+<div class="sug is-empty">
+  <div class="sug-head"><span class="t-label-md">Không còn IP phù hợp trong dải này</span></div>
+  <ul>
+    {% for reason, count in rejected.items() %}
+    <li>{{ reason }}: {{ count }} địa chỉ</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}

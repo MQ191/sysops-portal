@@ -1,0 +1,86 @@
+{% import "_icons.html" as ico %}
+<div id="vm-table">
+  <div class="table-head">
+    <h3>Danh sách thiết bị</h3>
+    <span class="chip chip-neutral">
+      {{ total }} kết quả{% if total > page_size %} · trang {{ page }}/{{ pages }}{% endif %}
+    </span>
+  </div>
+
+  <div class="table-wrap">
+    <table class="data">
+      <thead>
+        <tr>
+          <th>Tên</th><th>IP</th><th>Đơn vị / Dự án</th><th>Cấu hình</th>
+          <th>Người đứng tên</th><th>Hạn dùng</th><th>Trạng thái</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for d in devices %}
+        <tr>
+          <td>
+            <div class="cell-title">{{ d.name }}</div>
+            <div class="cell-sub">{{ d.os or "—" }}</div>
+          </td>
+          <td class="ip">{{ d.ips | join(", ") if d.ips else "—" }}</td>
+          <td>
+            <div class="cell-title">{{ d.department or "—" }}</div>
+            <div class="cell-sub">{{ d.project or "—" }}</div>
+          </td>
+          <td class="cell-sub">
+            {{ d.cpu_cores or "?" }} vCPU · {{ d.ram_gb | round | int if d.ram_gb else "?" }} GB
+          </td>
+          <td>
+            {% if d.owner_email %}
+            <span class="cell-sub">{{ d.owner_email }}</span>
+            {% else %}
+            <span class="chip chip-error"><span class="dot"></span>Chưa có</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if d.expires_at %}
+              <div class="mono">{{ d.expires_at }}</div>
+              {% if d.days_to_expiry is not none %}
+              <div class="cell-sub">
+                {% if d.days_to_expiry < 0 %}quá hạn {{ -d.days_to_expiry }} ngày
+                {% else %}còn {{ d.days_to_expiry }} ngày{% endif %}
+              </div>
+              {% endif %}
+            {% else %}
+            <span class="chip chip-warn"><span class="dot"></span>Chưa có</span>
+            {% endif %}
+          </td>
+          <td>
+            {% set st = d.lifecycle_status %}
+            {% if st == 'active' %}<span class="chip chip-ok"><span class="dot"></span>Đang chạy</span>
+            {% elif st == 'expiring' %}<span class="chip chip-warn"><span class="dot"></span>Sắp hết hạn</span>
+            {% elif st == 'pending_reclaim' %}<span class="chip chip-error"><span class="dot"></span>Chờ thu hồi</span>
+            {% else %}<span class="chip chip-neutral"><span class="dot"></span>{{ st }}</span>{% endif %}
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="7" class="empty center">Không có thiết bị nào khớp bộ lọc.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if pages > 1 %}
+  <div class="pager">
+    <span class="t-label-sm muted">
+      Hiển thị {{ devices | length }} / {{ total }} thiết bị
+    </span>
+    <div class="row gap-sm">
+      <button class="btn btn-ghost" style="padding:6px 12px"
+              {% if page <= 1 %}disabled{% endif %}
+              hx-get="/ui/vm/table?page={{ page - 1 }}"
+              hx-include="#vm-filters" hx-target="#vm-table" hx-swap="outerHTML">Trước</button>
+      <span class="t-label-sm" style="padding:0 8px">{{ page }} / {{ pages }}</span>
+      <button class="btn btn-ghost" style="padding:6px 12px"
+              {% if page >= pages %}disabled{% endif %}
+              hx-get="/ui/vm/table?page={{ page + 1 }}"
+              hx-include="#vm-filters" hx-target="#vm-table" hx-swap="outerHTML">Sau</button>
+    </div>
+  </div>
+  {% endif %}
+</div>

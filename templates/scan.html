@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% import "_icons.html" as ico %}
+{% block title %}Quét mạng · SysOps Portal{% endblock %}
+{% block topbar %}Quét mạng{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="crumbs"><span>SysOps</span><span>/</span><span class="cur">Quét mạng</span></div>
+    <h2>Sức khoẻ scanner</h2>
+    <div class="page-sub">
+      Màn hình đầu tiên cần xem mỗi sáng: scanner hỏng thì mọi IP bị coi là
+      trống và hệ thống sẽ tự tin gợi ý địa chỉ đang có máy chạy.
+    </div>
+  </div>
+
+  {% if can_scan %}
+  <form class="form-row" hx-post="/ui/scan/run" hx-target="#toasts" hx-swap="beforeend">
+    <div class="field">
+      <label for="sc-cidr">Quét ngay một dải</label>
+      <select class="input" id="sc-cidr" name="cidr">
+        {% for s in health.subnets %}
+        <option value="{{ s.cidr }}">{{ s.cidr }}{% if s.name %} — {{ s.name }}{% endif %}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button class="btn btn-primary" type="submit">
+      {{ ico.icon("refresh") }}Quét ngay<span class="spin"></span>
+    </button>
+  </form>
+  {% endif %}
+</div>
+
+<div class="grid12">
+  <div class="col-12">
+    {% include "_scanner_health.html" %}
+  </div>
+
+  <div class="card col-12">
+    <div class="card-head"><h3>Lịch sử chạy job</h3></div>
+    <div class="table-wrap">
+      <table class="data">
+        <thead>
+          <tr><th>Loại</th><th>Đối tượng</th><th>Bắt đầu</th><th>Kết quả</th><th>Quét</th><th>Lệch mới</th><th>Ghi chú</th></tr>
+        </thead>
+        <tbody>
+        {% for r in runs %}
+          <tr>
+            <td><span class="chip chip-neutral">{{ r.kind }}</span></td>
+            <td class="ip">{{ r.subject or "—" }}</td>
+            <td class="cell-sub">{{ r.started_at }}</td>
+            <td>
+              {% if r.ok %}<span class="chip chip-ok"><span class="dot"></span>Thành công</span>
+              {% else %}<span class="chip chip-error"><span class="dot"></span>Thất bại</span>{% endif %}
+            </td>
+            <td class="num">{{ r.items_seen }}</td>
+            <td class="num">{{ r.findings_created }}</td>
+            <td class="cell-sub">{{ r.error or "" }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="7" class="empty center">Chưa có lượt chạy nào được ghi nhận.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

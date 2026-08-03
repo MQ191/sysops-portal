@@ -1,0 +1,104 @@
+# Biến chung cho mọi service chạy code ứng dụng — tránh copy-paste lệch nhau
+# giữa api/worker/beat, vốn là nguyên nhân kinh điển của lỗi "chạy được ở
+# service này nhưng service kia thì không".
+x-app-env: &app-env
+  DATABASE_URL: postgresql+psycopg://sysops:${DB_PASSWORD}@db:5432/sysops
+  REDIS_URL: redis://redis:6379/0
+  AUTH_MODE: ${AUTH_MODE:?Dat AUTH_MODE=token hoac ldap trong .env}
+  AUTH_TOKENS: ${AUTH_TOKENS:-}
+  SESSION_SECRET: ${SESSION_SECRET:?Dat SESSION_SECRET trong .env}
+  AUTO_CREATE_TABLES: "false"
+  VAULT_ADDR: ${VAULT_ADDR:-}
+  VAULT_UI: ${VAULT_UI:-}
+  VCENTER_HOST: ${VCENTER_HOST:-}
+  VCENTER_USER: ${VCENTER_USER:-}
+  VCENTER_PASSWORD: ${VCENTER_PASSWORD:-}
+  VCENTER_INSECURE: ${VCENTER_INSECURE:-false}
+  SCAN_SUBNETS: ${SCAN_SUBNETS:-}
+  SMTP_HOST: ${SMTP_HOST:-}
+  SMTP_FROM: ${SMTP_FROM:-}
+  LDAP_URI: ${LDAP_URI:-}
+  LDAP_USER_DN_TEMPLATE: ${LDAP_USER_DN_TEMPLATE:-}
+  LDAP_GROUP_BASE_DN: ${LDAP_GROUP_BASE_DN:-}
+  LDAP_ADMIN_GROUP: ${LDAP_ADMIN_GROUP:-}
+  LDAP_SYSOPS_GROUP: ${LDAP_SYSOPS_GROUP:-}
+
+x-app-build: &app-build
+  build: .
+  depends_on:
+    db:
+      condition: service_healthy
+    redis:
+      condition: service_started
+  restart: unless-stopped
+
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: sysops
+      POSTGRES_USER: sysops
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Đặt DB_PASSWORD trong file .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sysops"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  # Chạy migration TRƯỚC khi api khởi động. Không có bước này, hai instance api
+  # khởi động song song sẽ cùng cố nâng cấp schema.
+  migrate:
+    <<: *app-build
+    environment: *app-env
+    command: alembic upgrade head
+    restart: "no"
+
+  api:
+    <<: *app-build
+    environment: *app-env
+    command: uvicorn app:app --host 0.0.0.0 --port 8080
+    ports:
+      - "127.0.0.1:8080:8080"   # chỉ nghe localhost; đặt sau reverse proxy nội bộ
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      migrate:
+        condition: service_completed_successfully
+
+  worker:
+    <<: *app-build
+    environment: *app-env
+    command: celery -A celery_app worker -l info
+    # Scanner cần raw socket. Dockerfile đã setcap cho /bin/ping để tiến trình
+    # non-root dùng được — cap_add ở đây là điều kiện cần, không phải đủ.
+    cap_add:
+      - NET_RAW
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      migrate:
+        condition: service_completed_successfully
+
+  beat:
+    <<: *app-build
+    environment: *app-env
+    command: celery -A celery_app beat -l info
+
+volumes:
+  pgdata:

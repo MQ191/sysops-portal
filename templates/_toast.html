@@ -1,0 +1,14 @@
+{#
+  Toast gửi kèm mọi phản hồi HTMX bằng out-of-band swap: hành động ghi dữ
+  liệu mà không có phản hồi rõ ràng là cách nhanh nhất để người dùng bấm hai
+  lần rồi tự hỏi chuyện gì vừa xảy ra.
+#}
+<div id="toasts" hx-swap-oob="beforeend">
+  <div class="toast is-{{ kind }}" role="status">
+    <div>
+      {%- if title %}<b>{{ title }}</b>{% endif -%}
+      {{ message }}
+    </div>
+    <span class="close" onclick="this.closest('.toast').remove()" aria-hidden="true">×</span>
+  </div>
+</div>
