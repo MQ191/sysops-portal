@@ -22,6 +22,38 @@ class ResolveRequest(BaseModel):
     status: DriftStatus = DriftStatus.resolved
 
 
+DRIFT_TYPE_LABELS = {
+    "expired": "Máy ảo quá hạn",
+    "unregistered_vm": "VM chưa đăng ký",
+    "ghost_vm": "VM bóng ma",
+    "shadow_ip": "IP bóng ma",
+    "stale_allocation": "IP không phản hồi",
+    "spec_mismatch": "Sai lệch cấu hình",
+    "missing_owner": "Thiếu chủ sở hữu",
+    "missing_expiry": "Thiếu hạn dùng",
+    "ip_conflict": "Xung đột IP",
+}
+
+SEV_LABELS = {
+    "critical": "Nghiêm trọng",
+    "high": "Cao",
+    "medium": "Trung bình",
+    "low": "Thấp",
+}
+
+
+def resolve_finding_display(f: DriftFinding) -> tuple[str, str]:
+    if f.device and f.device.name:
+        return f.device.name, "vm" if getattr(f.device.device_type, "value", str(f.device.device_type)) == "vm" else "server"
+    if isinstance(f.detail, dict) and f.detail.get("name"):
+        return str(f.detail["name"]), "vm"
+    if f.ip_address and f.ip_address.address:
+        return f.ip_address.address, "ip"
+    if f.subject_key and f.subject_key.count(".") == 3:
+        return f.subject_key, "ip"
+    return f.subject_key, "other"
+
+
 @router.get("/drift")
 def list_drift(
     status: DriftStatus = DriftStatus.open,
@@ -46,26 +78,33 @@ def list_drift(
         findings = [f for f in findings if (f.sla_deadline < now) == sla_breached]
 
     page = findings[offset : offset + limit]
+    
+    result_findings = []
+    for f in page:
+        subj_display, subj_type = resolve_finding_display(f)
+        result_findings.append({
+            "id": f.id,
+            "type": f.drift_type.value,
+            "type_label": DRIFT_TYPE_LABELS.get(f.drift_type.value, f.drift_type.value),
+            "severity": f.severity.value,
+            "severity_label": SEV_LABELS.get(f.severity.value, f.severity.value),
+            "status": f.status.value,
+            "subject": f.subject_key,
+            "subject_display": subj_display,
+            "subject_type": subj_type,
+            "detail": f.detail,
+            "first_seen_at": f.first_seen_at.isoformat(),
+            "last_seen_at": f.last_seen_at.isoformat(),
+            "sla_deadline": f.sla_deadline.isoformat(),
+            "sla_breached": f.sla_deadline < now,
+            "assigned_to": f.assigned_to,
+        })
+
     return {
         "total": total,
         "count": len(page),
         "offset": offset,
-        "findings": [
-            {
-                "id": f.id,
-                "type": f.drift_type.value,
-                "severity": f.severity.value,
-                "status": f.status.value,
-                "subject": f.subject_key,
-                "detail": f.detail,
-                "first_seen_at": f.first_seen_at.isoformat(),
-                "last_seen_at": f.last_seen_at.isoformat(),
-                "sla_deadline": f.sla_deadline.isoformat(),
-                "sla_breached": f.sla_deadline < now,
-                "assigned_to": f.assigned_to,
-            }
-            for f in page
-        ],
+        "findings": result_findings,
     }
 
 

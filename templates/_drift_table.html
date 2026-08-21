@@ -14,37 +14,112 @@
     <table class="data">
       <thead>
         <tr>
-          <th>Mức độ</th><th>Loại</th><th>Đối tượng</th><th>Chi tiết</th>
-          <th>Hạn SLA</th>{% if can_resolve %}<th class="right">Xử lý</th>{% endif %}
+          <th style="width:120px">Mức độ</th>
+          <th style="width:160px">Loại lệch</th>
+          <th style="width:240px">Đối tượng</th>
+          <th>Chi tiết &amp; Khuyến nghị</th>
+          <th style="width:160px">Hạn SLA</th>
+          {% if can_resolve %}<th class="right" style="width:90px">Xử lý</th>{% endif %}
         </tr>
       </thead>
       <tbody>
       {% for f in findings %}
         <tr>
           <td>
-            {% if f.severity in ('critical', 'high') %}
-            <span class="chip chip-error"><span class="dot"></span>{{ f.severity }}</span>
+            {% if f.severity == 'critical' %}
+            <span class="chip chip-error"><span class="dot"></span>Nghiêm trọng</span>
+            {% elif f.severity == 'high' %}
+            <span class="chip chip-error"><span class="dot"></span>Cao</span>
             {% elif f.severity == 'medium' %}
-            <span class="chip chip-warn"><span class="dot"></span>medium</span>
+            <span class="chip chip-warn"><span class="dot"></span>Trung bình</span>
             {% else %}
-            <span class="chip chip-neutral"><span class="dot"></span>low</span>{% endif %}
-          </td>
-          <td class="cell-title">{{ f.type }}</td>
-          <td class="ip">{{ f.subject }}</td>
-          <td class="cell-sub">
-            {% for k, v in (f.detail or {}).items() %}{{ k }}={{ v }}{% if not loop.last %} · {% endif %}{% endfor %}
+            <span class="chip chip-neutral"><span class="dot"></span>Thấp</span>
+            {% endif %}
           </td>
           <td>
-            <div class="cell-sub">{{ f.sla_deadline[:16] | replace("T", " ") }}</div>
-            {% if f.sla_breached %}
-            <span class="chip chip-error"><span class="dot"></span>Quá hạn</span>
+            <span class="cell-title" style="font-weight:600">{{ f.type_label or f.type }}</span>
+          </td>
+          <td>
+            {% if f.subject_type == 'vm' %}
+              <div class="row gap-xs" style="align-items:center">
+                <span class="chip chip-neutral" style="font-size:11px;padding:2px 6px">{{ ico.icon("dns") }} VM</span>
+                <span style="font-weight:600;color:var(--on-surface)">{{ f.subject_display }}</span>
+              </div>
+            {% elif f.subject_type == 'server' %}
+              <div class="row gap-xs" style="align-items:center">
+                <span class="chip chip-neutral" style="font-size:11px;padding:2px 6px">{{ ico.icon("devices") }} Server</span>
+                <span style="font-weight:600;color:var(--on-surface)">{{ f.subject_display }}</span>
+              </div>
+            {% elif f.subject_type == 'ip' %}
+              <div class="row gap-xs" style="align-items:center">
+                <span class="chip chip-neutral" style="font-size:11px;padding:2px 6px">{{ ico.icon("lan") }} IP</span>
+                <span class="ip" style="font-weight:600">{{ f.subject_display }}</span>
+              </div>
             {% else %}
-            <span class="chip chip-ok"><span class="dot"></span>Trong hạn</span>
+              <span class="mono" style="font-weight:600">{{ f.subject_display }}</span>
+            {% endif %}
+            {% if f.subject != f.subject_display and f.subject_type != 'ip' %}
+              <div class="cell-sub mono" style="font-size:11px;opacity:0.65;margin-top:2px" title="{{ f.subject }}">{{ f.subject[:24] }}{% if f.subject|length > 24 %}...{% endif %}</div>
+            {% endif %}
+          </td>
+          <td>
+            {% if f.type == 'expired' %}
+              <div class="row gap-xs wrap" style="align-items:center">
+                <span class="chip chip-error" style="font-size:12px">Quá hạn: <b>{{ f.detail.get('expired_days_ago', '?') }} ngày</b></span>
+                {% if f.detail.get('wasted_vcpu') or f.detail.get('wasted_ram_gb') %}
+                <span class="chip chip-warn" style="font-size:12px">Lãng phí: <b>{{ f.detail.get('wasted_vcpu', 0) }} vCPU</b> · <b>{{ f.detail.get('wasted_ram_gb', 0) }} GB RAM</b></span>
+                {% endif %}
+              </div>
+            {% elif f.type == 'spec_mismatch' %}
+              <div class="row gap-xs wrap" style="align-items:center">
+                {% for spec_k, spec_v in (f.detail or {}).items() %}
+                  <span class="chip chip-warn" style="font-size:12px"><b>{{ spec_k }}</b>: DB {{ spec_v.get('db') }} ➔ vCenter {{ spec_v.get('vcenter') }}</span>
+                {% endfor %}
+              </div>
+            {% elif f.type == 'unregistered_vm' %}
+              <div class="stack gap-xs">
+                {% if f.detail.get('ips') %}
+                <span class="chip chip-neutral" style="font-size:12px;width:fit-content">IP: <b>{{ f.detail.get('ips') | join(', ') if f.detail.get('ips') is iterable and f.detail.get('ips') is not string else f.detail.get('ips') }}</b></span>
+                {% endif %}
+                <span class="cell-sub">{{ f.detail.get('hint', 'Có trên vCenter nhưng chưa khai báo chủ sở hữu') }}</span>
+              </div>
+            {% elif f.type == 'ghost_vm' %}
+              <span class="cell-sub" style="color:var(--error)">{{ f.detail.get('hint', 'Đã xoá trên vCenter nhưng chưa thu hồi trong hệ thống quản lý') }}</span>
+            {% elif f.type == 'missing_owner' %}
+              <span class="cell-sub">Chưa gán thông tin người sở hữu (owner email) hoặc phòng ban quản lý</span>
+            {% elif f.type == 'missing_expiry' %}
+              <span class="cell-sub">Máy ảo chưa được thiết lập thời hạn thu hồi (expires_at)</span>
+            {% elif f.type == 'shadow_ip' %}
+              <div class="stack gap-xs">
+                {% if f.detail.get('mac') %}<span class="chip chip-neutral mono" style="font-size:12px;width:fit-content">MAC: {{ f.detail.get('mac') }}</span>{% endif %}
+                <span class="cell-sub">Có thiết bị chạy thực tế nhưng IP chưa được cấp trong hệ thống</span>
+              </div>
+            {% elif f.type == 'stale_allocation' %}
+              <span class="cell-sub">IP đã cấp nhưng không phản hồi qua {{ f.detail.get('consecutive_unresponsive', 5) }} lần quét liên tiếp</span>
+            {% elif f.type == 'ip_conflict' %}
+              <div class="row gap-xs wrap" style="align-items:center">
+                <span class="chip chip-error" style="font-size:12px">Xung đột IP</span>
+                {% if f.detail.get('macs') %}<span class="mono cell-sub">MACs: {{ f.detail.get('macs') | join(', ') }}</span>{% endif %}
+              </div>
+            {% else %}
+              <div class="row gap-xs wrap">
+                {% for k, v in (f.detail or {}).items() %}
+                  {% if k != 'name' %}<span class="chip chip-neutral" style="font-size:12px">{{ k }}: {{ v }}</span>{% endif %}
+                {% endfor %}
+              </div>
+            {% endif %}
+          </td>
+          <td>
+            <div class="cell-sub" style="font-weight:500">{{ f.sla_deadline[:16] | replace("T", " ") }}</div>
+            {% if f.sla_breached %}
+            <span class="chip chip-error" style="margin-top:3px"><span class="dot"></span>Quá hạn</span>
+            {% else %}
+            <span class="chip chip-ok" style="margin-top:3px"><span class="dot"></span>Trong hạn</span>
             {% endif %}
           </td>
           {% if can_resolve %}
           <td class="right">
-            <button class="btn btn-quiet" style="padding:6px 12px"
+            <button class="btn btn-quiet" style="padding:6px 14px"
                     hx-get="/ui/drift/{{ f.id }}/resolve-form"
                     hx-target="#drawer-slot" hx-swap="innerHTML">Xử lý</button>
           </td>

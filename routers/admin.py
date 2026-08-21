@@ -37,7 +37,7 @@ class SubnetCreate(BaseModel):
     reserved_ranges: list[dict] = Field(default_factory=list)
     allocation_policy: str = "lowest_first"
     cooldown_days: int = Field(14, ge=0, le=365)
-    scan_staleness_hours: int = Field(12, ge=1, le=720)
+    scan_staleness_hours: int = Field(30, ge=1, le=720)
 
 
 # --------------------------------------------------------------------------- #

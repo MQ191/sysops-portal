@@ -102,16 +102,16 @@ celery.conf.beat_schedule = {
         "task": "maintenance",
         "schedule": crontab(minute="*"),
     },
-    # ICMP sweep 4 giờ/lần: đủ để đạt 5 lần quét liên tiếp trong ~20 giờ
+    # ICMP sweep 1 lần/ngày lúc 00:00 đêm: giảm tải mạng giờ làm việc
     "icmp-scan": {
         "task": "scan_all_subnets",
-        "schedule": crontab(minute=0, hour="*/4"),
+        "schedule": crontab(minute=0, hour=0),
         "args": ("icmp",),
     },
-    # ARP quét 1 lần/ngày lúc 3h sáng, ít ảnh hưởng tải mạng giờ làm việc
+    # ARP quét 1 lần/ngày lúc 00:30 đêm (sau khi ICMP sweep xong)
     "arp-scan": {
         "task": "scan_all_subnets",
-        "schedule": crontab(minute=0, hour=3),
+        "schedule": crontab(minute=30, hour=0),
         "args": ("arp",),
     },
     "vcenter-sync": {

@@ -28,6 +28,7 @@
       ("/scan",  "radar",     "Quét mạng"),
       ("/drift", "shield",    "Hàng đợi lệch"),
       ("/audit", "history",   "Nhật ký hệ thống"),
+      ("/import", "upload",   "Nhập dữ liệu CSV"),
     ] %}
     {% for href, name, label in nav_items %}
     <a class="nav-item{% if href == active %} is-active{% endif %}" href="{{ href }}">

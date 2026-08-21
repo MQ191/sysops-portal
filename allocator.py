@@ -107,7 +107,7 @@ class SubnetContext:
     # Mốc lần quét gần nhất ĐƯỢC XÁC THỰC là đáng tin (đã qua canary gateway).
     # None = chưa từng quét thành công.
     last_scan_ok_at: datetime | None = None
-    scan_staleness_hours: int = 12
+    scan_staleness_hours: int = 30
 
     def __post_init__(self) -> None:
         self.network = ipaddress.ip_network(self.cidr, strict=False)

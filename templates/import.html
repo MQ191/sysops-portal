@@ -1,0 +1,414 @@
+{% extends "base.html" %}
+{% import "_icons.html" as ico %}
+{% block title %}Nhập dữ liệu CSV · SysOps Portal{% endblock %}
+{% block topbar %}Nhập dữ liệu CSV{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="crumbs"><span>SysOps</span><span>/</span><span class="cur">Nhập dữ liệu CSV</span></div>
+    <h2>Import dữ liệu từ file CSV</h2>
+    <div class="page-sub">
+      Hệ thống hỗ trợ nạp dữ liệu từ 3 bảng thống kê (Server vật lý, Máy ảo VM, Quy hoạch Network).
+    </div>
+  </div>
+</div>
+
+<div class="grid12">
+  <!-- Cột trái: Form Upload 3 File -->
+  <div class="col-8">
+    <div class="card" style="padding:24px">
+      <div class="card-head" style="margin-bottom:16px;border-bottom:1px solid var(--surface-container-high);padding-bottom:12px">
+        <div>
+          <h3 style="font-size:18px;font-weight:600;margin:0">Chọn file dữ liệu để import</h3>
+          <p class="cell-sub" style="margin:4px 0 0 0">
+            Bạn có thể chọn tải lên 1, 2 hoặc cả 3 file cùng lúc. Hệ thống sẽ tự động tối ưu thứ tự nạp (Vật lý ➔ VM ➔ Network).
+          </p>
+        </div>
+      </div>
+
+      <form id="import-form" hx-post="/ui/import/submit" hx-target="#import-result" hx-swap="innerHTML" hx-encoding="multipart/form-data">
+        <div class="stack gap-lg">
+
+          <!-- 1. File Server Vật Lý -->
+          <div class="upload-card">
+            <div class="upload-card-head">
+              <div class="row gap-xs" style="align-items:center">
+                <span class="upload-badge">1</span>
+                <div>
+                  <span class="upload-title">File Server Vật Lý (CSV)</span>
+                  <div class="upload-desc">Chứa thông tin thiết bị vật lý, mã tài sản (Asset Code), CPU, RAM, Disk, IP, Đơn vị sử dụng...</div>
+                </div>
+              </div>
+              <a class="btn-download-tpl" href="/api/v1/import/template/physical" download="physical_sample.csv" title="Tải file mẫu physical.csv">
+                {{ ico.icon("download") }}<span>Tải file mẫu</span>
+              </a>
+            </div>
+            <div class="dropzone" id="dz-physical" onclick="document.getElementById('file-physical').click()">
+              <input type="file" id="file-physical" name="file_physical" accept=".csv" style="display:none" onchange="handleFileSelect(this, 'dz-physical-info', 'dz-physical')">
+              <div id="dz-physical-info" class="dropzone-content">
+                {{ ico.icon("upload") }}
+                <div class="dropzone-text">
+                  <span class="dropzone-action">Bấm để chọn file</span> hoặc kéo thả file CSV vào đây
+                </div>
+                <div class="dropzone-hint">Định dạng hỗ trợ: .csv (UTF-8)</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. File Thống Kê Máy Ảo VM -->
+          <div class="upload-card">
+            <div class="upload-card-head">
+              <div class="row gap-xs" style="align-items:center">
+                <span class="upload-badge">2</span>
+                <div>
+                  <span class="upload-title">File Thống Kê Máy Ảo VM (CSV)</span>
+                  <div class="upload-desc">Chứa cấu hình VM, trạng thái bật/tắt (PowerState), người yêu cầu (Requester), ngày xác nhận...</div>
+                </div>
+              </div>
+              <a class="btn-download-tpl" href="/api/v1/import/template/vm" download="vm_sample.csv" title="Tải file mẫu vm.csv">
+                {{ ico.icon("download") }}<span>Tải file mẫu</span>
+              </a>
+            </div>
+            <div class="dropzone" id="dz-vm" onclick="document.getElementById('file-vm').click()">
+              <input type="file" id="file-vm" name="file_vm" accept=".csv" style="display:none" onchange="handleFileSelect(this, 'dz-vm-info', 'dz-vm')">
+              <div id="dz-vm-info" class="dropzone-content">
+                {{ ico.icon("upload") }}
+                <div class="dropzone-text">
+                  <span class="dropzone-action">Bấm để chọn file</span> hoặc kéo thả file CSV vào đây
+                </div>
+                <div class="dropzone-hint">Định dạng hỗ trợ: .csv (UTF-8)</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. File Quy Hoạch Mạng Network -->
+          <div class="upload-card">
+            <div class="upload-card-head">
+              <div class="row gap-xs" style="align-items:center">
+                <span class="upload-badge">3</span>
+                <div>
+                  <span class="upload-title">File Quy Hoạch Mạng Network (CSV)</span>
+                  <div class="upload-desc">Nguồn IP chính thức, chứa địa chỉ IP, tên máy đang sử dụng, tài khoản/mật khẩu quản trị tạm...</div>
+                </div>
+              </div>
+              <a class="btn-download-tpl" href="/api/v1/import/template/network" download="network_sample.csv" title="Tải file mẫu network.csv">
+                {{ ico.icon("download") }}<span>Tải file mẫu</span>
+              </a>
+            </div>
+            <div class="dropzone" id="dz-network" onclick="document.getElementById('file-network').click()">
+              <input type="file" id="file-network" name="file_network" accept=".csv" style="display:none" onchange="handleFileSelect(this, 'dz-network-info', 'dz-network')">
+              <div id="dz-network-info" class="dropzone-content">
+                {{ ico.icon("upload") }}
+                <div class="dropzone-text">
+                  <span class="dropzone-action">Bấm để chọn file</span> hoặc kéo thả file CSV vào đây
+                </div>
+                <div class="dropzone-hint">Định dạng hỗ trợ: .csv (UTF-8)</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Nút Submit -->
+          <div class="row between" style="margin-top:8px;padding-top:16px;border-top:1px solid var(--surface-container-high)">
+            <button type="button" class="btn btn-quiet" onclick="resetImportForm()">Xoá các file đã chọn</button>
+            <button type="submit" class="btn btn-primary" style="padding:10px 24px;font-size:14px;font-weight:600">
+              {{ ico.icon("upload") }}Bắt đầu Import dữ liệu<span class="spin"></span>
+            </button>
+          </div>
+
+        </div>
+      </form>
+
+      <!-- Vùng hiển thị kết quả -->
+      <div id="import-result" style="margin-top:20px"></div>
+    </div>
+  </div>
+
+  <!-- Cột phải: Quy tắc xử lý của Importer -->
+  <div class="col-4">
+    <div class="card" style="padding:24px;position:sticky;top:24px">
+      <div class="card-head" style="margin-bottom:16px;border-bottom:1px solid var(--surface-container-high);padding-bottom:12px">
+        <h3 style="font-size:16px;font-weight:600;margin:0">Quy tắc xử lý của Importer</h3>
+      </div>
+
+      <div class="stack gap-md">
+        <!-- Quy tắc 1 -->
+        <div class="rule-item">
+          <div class="rule-icon-box" style="background:#e0f2fe;color:#0284c7">
+            {{ ico.icon("table") }}
+          </div>
+          <div>
+            <div class="rule-title">1. Tự động sửa lỗi tiêu đề cột</div>
+            <div class="rule-body">
+              Hệ thống tự nhận diện các tên cột tương đương (VD: "TÊN SERVER", "TEN SERVER", "RAM", "Ram_GB"). Không cần đổi tên cột theo khuôn mẫu cứng nhắc.
+            </div>
+          </div>
+        </div>
+
+        <!-- Quy tắc 2 -->
+        <div class="rule-item">
+          <div class="rule-icon-box" style="background:#fef3c7;color:#d97706">
+            {{ ico.icon("shield") }}
+          </div>
+          <div>
+            <div class="rule-title">2. Bảo mật thông tin tài khoản</div>
+            <div class="rule-body">
+              Tất cả dữ liệu USER và PASS trong file network sẽ được tách riêng ra file tải về <span class="mono">vault_import.csv</span> để nạp vào HashiCorp Vault. Hệ thống <b>tuyệt đối không lưu mật khẩu</b> này vào cơ sở dữ liệu.
+            </div>
+          </div>
+        </div>
+
+        <!-- Quy tắc 3 -->
+        <div class="rule-item">
+          <div class="rule-icon-box" style="background:#fce7f3;color:#db2777">
+            {{ ico.icon("history") }}
+          </div>
+          <div>
+            <div class="rule-title">3. Không đoán bừa ngày tháng</div>
+            <div class="rule-body">
+              Định dạng ngày tháng mập mờ (VD: "05/06/2026") sẽ được chuyển vào mục cần review để tránh thu hồi nhầm VM đang hoạt động.
+            </div>
+          </div>
+        </div>
+
+        <!-- Quy tắc 4 -->
+        <div class="rule-item">
+          <div class="rule-icon-box" style="background:#dcfce7;color:#16a34a">
+            {{ ico.icon("check_circle") }}
+          </div>
+          <div>
+            <div class="rule-title">4. Thứ tự nạp ưu tiên</div>
+            <div class="rule-body">
+              Tự động thực thi theo thứ tự: <b>Vật lý ➔ VM ➔ Network</b> để đảm bảo thiết bị phần cứng được gán mã tài sản chính xác trước khi gắn IP.
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .upload-card {
+    background: var(--surface-container-lowest);
+    border: 1px solid var(--surface-container-high);
+    border-radius: var(--r-md);
+    padding: 16px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .upload-card:hover {
+    border-color: var(--primary-fixed-dim);
+  }
+  .upload-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .upload-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--primary-container);
+    color: var(--on-primary);
+    font-size: 13px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .upload-title {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--on-surface);
+  }
+  .upload-desc {
+    font-size: 12px;
+    color: var(--on-surface-variant);
+    margin-top: 2px;
+  }
+  .btn-download-tpl {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: var(--r-sm);
+    background: var(--surface-container);
+    color: var(--primary);
+    font-size: 12px;
+    font-weight: 500;
+    text-decoration: none;
+    border: 1px solid var(--outline-variant);
+    white-space: nowrap;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+  }
+  .btn-download-tpl svg {
+    width: 14px;
+    height: 14px;
+  }
+  .btn-download-tpl:hover {
+    background: var(--primary-fixed);
+    color: var(--on-primary-fixed);
+    border-color: var(--primary);
+  }
+  .dropzone {
+    border: 2px dashed var(--outline-variant);
+    border-radius: var(--r);
+    padding: 16px;
+    text-align: center;
+    background: var(--surface-container-low);
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .dropzone:hover, .dropzone.is-dragover {
+    border-color: var(--primary);
+    background: var(--primary-fixed);
+  }
+  .dropzone.has-file {
+    border-color: var(--ok);
+    background: var(--ok-container);
+    border-style: solid;
+  }
+  .dropzone-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+  .dropzone-content svg {
+    width: 24px;
+    height: 24px;
+    color: var(--primary);
+  }
+  .dropzone-text {
+    font-size: 13px;
+    color: var(--on-surface);
+  }
+  .dropzone-action {
+    font-weight: 600;
+    color: var(--primary);
+    text-decoration: underline;
+  }
+  .dropzone-hint {
+    font-size: 11px;
+    color: var(--on-surface-variant);
+  }
+  .file-selected-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    color: var(--ok);
+    font-size: 13px;
+  }
+  .rule-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .rule-icon-box {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .rule-icon-box svg {
+    width: 18px;
+    height: 18px;
+  }
+  .rule-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--on-surface);
+  }
+  .rule-body {
+    font-size: 12px;
+    color: var(--on-surface-variant);
+    line-height: 1.5;
+    margin-top: 2px;
+  }
+</style>
+
+<script>
+  function formatBytes(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    var k = 1024, sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    var i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  }
+
+  function handleFileSelect(input, infoId, dzId) {
+    var info = document.getElementById(infoId);
+    var dz = document.getElementById(dzId);
+    if (input.files && input.files[0]) {
+      var f = input.files[0];
+      dz.classList.add('has-file');
+      info.innerHTML = `
+        <div class="file-selected-badge">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg>
+          <span>Đã chọn: <b>${f.name}</b> (${formatBytes(f.size)})</span>
+        </div>
+        <div style="font-size:11px;color:var(--on-surface-variant);margin-top:4px">Bấm để chọn file khác</div>
+      `;
+    }
+  }
+
+  function resetImportForm() {
+    document.getElementById('import-form').reset();
+    ['physical', 'vm', 'network'].forEach(function(type) {
+      var dz = document.getElementById('dz-' + type);
+      var info = document.getElementById('dz-' + type + '-info');
+      if (dz) dz.classList.remove('has-file');
+      if (info) {
+        info.innerHTML = `
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:24px;height:24px;color:var(--primary)"><path d="M12 17V5M7 9l5-5 5 5"/><path d="M4 20h16"/></svg>
+          <div class="dropzone-text"><span class="dropzone-action">Bấm để chọn file</span> hoặc kéo thả file CSV vào đây</div>
+          <div class="dropzone-hint">Định dạng hỗ trợ: .csv (UTF-8)</div>
+        `;
+      }
+    });
+    var res = document.getElementById('import-result');
+    if (res) res.innerHTML = '';
+  }
+
+  // Hỗ trợ kéo thả (drag and drop) cho các dropzone
+  ['dz-physical', 'dz-vm', 'dz-network'].forEach(function(id) {
+    var dz = document.getElementById(id);
+    if (!dz) return;
+    ['dragenter', 'dragover'].forEach(function(eventName) {
+      dz.addEventListener(eventName, function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        dz.classList.add('is-dragover');
+      }, false);
+    });
+    ['dragleave', 'drop'].forEach(function(eventName) {
+      dz.addEventListener(eventName, function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        dz.classList.remove('is-dragover');
+      }, false);
+    });
+    dz.addEventListener('drop', function(e) {
+      var dt = e.dataTransfer;
+      var files = dt.files;
+      if (files && files.length) {
+        var input = dz.querySelector('input[type="file"]');
+        if (input) {
+          input.files = files;
+          var infoId = id + '-info';
+          handleFileSelect(input, infoId, id);
+        }
+      }
+    }, false);
+  });
+</script>
+{% endblock %}

@@ -18,7 +18,7 @@ from datetime import date, timedelta
 from pathlib import Path
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Request
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Response, UploadFile
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
@@ -28,8 +28,14 @@ from auth import ADMIN, REQUESTER, SYSOPS, VIEWER, Principal, auth_mode, require
 from core import active_device, device_summary, find_subnet_for, utcnow
 from db import get_db
 from models import DriftFinding, DriftStatus, IPAddress, Severity, Subnet
-from routers.admin import list_sync_runs, trigger_scan
-from routers.drift import ResolveRequest, list_drift, resolve_drift
+from routers.drift import (
+    DRIFT_TYPE_LABELS,
+    SEV_LABELS,
+    ResolveRequest,
+    list_drift,
+    resolve_drift,
+    resolve_finding_display,
+)
 from routers.inventory import list_devices
 from routers.ipam import (
     CommitRequest,
@@ -719,6 +725,7 @@ def ui_drift_resolve_form(
     if not f:
         return _toast(request, "error", "Finding không còn tồn tại.", "Không tìm thấy")
 
+    subj_display, subj_type = resolve_finding_display(f)
     return _fragment(
         request,
         "_drift_resolve.html",
@@ -728,8 +735,12 @@ def ui_drift_resolve_form(
             "f": {
                 "id": f.id,
                 "type": f.drift_type.value,
+                "type_label": DRIFT_TYPE_LABELS.get(f.drift_type.value, f.drift_type.value),
                 "severity": f.severity.value,
+                "severity_label": SEV_LABELS.get(f.severity.value, f.severity.value),
                 "subject": f.subject_key,
+                "subject_display": subj_display,
+                "subject_type": subj_type,
                 "detail": f.detail or {},
                 "first_seen_at": f.first_seen_at.isoformat(),
                 "sla_deadline": f.sla_deadline.isoformat(),
@@ -863,3 +874,171 @@ def ui_logout():
     resp = RedirectResponse("/login", status_code=303)
     resp.delete_cookie(SESSION_COOKIE)
     return resp
+
+
+# --------------------------------------------------------------------------- #
+# Nhập dữ liệu CSV
+# --------------------------------------------------------------------------- #
+
+
+@router.get("/import", response_class=HTMLResponse)
+def ui_import_page(
+    request: Request,
+    db: Session = Depends(get_db),
+    p: Principal = Depends(require(SYSOPS)),
+):
+    return templates.TemplateResponse(
+        request,
+        "import.html",
+        {
+            "request": request,
+            "principal": p,
+            "active": "/import",
+            "scanner_alert": None,
+            "insecure_mode": p.via == "dev",
+        },
+    )
+
+
+@router.get("/api/v1/import/template/{file_type}")
+def get_import_template(
+    file_type: str,
+    p: Principal = Depends(require(VIEWER)),
+):
+    templates_data = {
+        "physical": (
+            "MÃ TÀI SẢN,TÊN SERVER,LOẠI THIẾT BỊ,ĐƠN VỊ SỬ DỤNG,DỰ ÁN,IP QUẢN TRỊ,CPU,RAM,DISK,OS,TRẠNG THÁI,GHI CHÚ\n"
+            "SRV-001,SDC-HAPROXY-01,Physical Server,SDC1,Core Infra,10.0.64.10,32,128,2000,Ubuntu 22.04,Đang sử dụng,Server production\n"
+            "SRV-002,SDC-DB-PRIMARY,Physical Server,SDC1,Database Cls,10.0.64.11,64,256,4000,RHEL 9,Đang sử dụng,Không xóa\n"
+        ),
+        "vm": (
+            "TÊN VM,CPU (vCPU),RAM (GB),Dung lượng đĩa (GB),Hệ điều hành,Trạng thái Power,Người yêu cầu (Requester),Ngày cấp,Hạn thu hồi,Ghi chú\n"
+            "SDC1-APP-TEST-01,4,8,100,Ubuntu 22.04,poweredOn,quang.dang1@ntq-solution.com.vn,2026-01-15,2026-12-31,VM chạy thử nghiệm\n"
+            "SDC1-BUILD-01,8,16,200,CentOS 7,poweredOn,sysops@ntq-solution.com.vn,2026-02-01,no expire,Server Jenkins build\n"
+        ),
+        "network": (
+            "LIST ĐỊA CHỈ IP,THIẾT BỊ ĐANG SỬ DỤNG,ĐƠN VỊ,DỰ ÁN,TRẠNG THÁI,USER,PASS,Date,GHI CHÚ\n"
+            "10.0.76.10,SDC1-GATEWAY,SDC1,Infra,running,admin,******,2026-12-31,Gateway chính\n"
+            "10.0.76.11,SDC1-APP-01,SDC1,Web App,running,root,******,2026-11-30,Server backend\n"
+        ),
+    }
+    content = templates_data.get(file_type)
+    if not content:
+        raise HTTPException(404, "Không tìm thấy mẫu file yêu cầu")
+
+    filename = f"{file_type}_template.csv"
+    return Response(
+        content=content.encode("utf-8-sig"),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.post("/ui/import/submit", response_class=HTMLResponse)
+async def ui_import_submit(
+    request: Request,
+    file_physical: UploadFile | None = File(None),
+    file_vm: UploadFile | None = File(None),
+    file_network: UploadFile | None = File(None),
+    db: Session = Depends(get_db),
+    p: Principal = Depends(require(SYSOPS)),
+):
+    import os
+    import tempfile
+    from importer import (
+        REVIEW_ROWS,
+        VAULT_ROWS,
+        import_network,
+        import_physical,
+        import_vm,
+    )
+
+    results = []
+    has_file = False
+
+    if db.scalar(select(Subnet)) is None:
+        return HTMLResponse(
+            '<div class="banner banner-danger" style="margin:0">'
+            'Chưa có dải mạng nào được khai báo trong hệ thống. Vui lòng khai báo Subnet trước khi import!'
+            '</div>'
+        )
+
+    REVIEW_ROWS.clear()
+    VAULT_ROWS.clear()
+
+    # 1. Physical
+    if file_physical and file_physical.filename and file_physical.size and file_physical.size > 0:
+        has_file = True
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".csv") as tmp:
+            tmp.write(await file_physical.read())
+            tmp_path = tmp.name
+        try:
+            n_phys = import_physical(db, tmp_path)
+            results.append(f"✓ <b>Server vật lý:</b> Đã nhập thành công <b>{n_phys}</b> dòng")
+        except Exception as e:
+            results.append(f"✗ <b>Server vật lý lỗi:</b> {e}")
+        finally:
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+
+    # 2. VM
+    if file_vm and file_vm.filename and file_vm.size and file_vm.size > 0:
+        has_file = True
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".csv") as tmp:
+            tmp.write(await file_vm.read())
+            tmp_path = tmp.name
+        try:
+            n_vm = import_vm(db, tmp_path)
+            results.append(f"✓ <b>Thống kê VM:</b> Đã nhập thành công <b>{n_vm}</b> dòng")
+        except Exception as e:
+            results.append(f"✗ <b>Thống kê VM lỗi:</b> {e}")
+        finally:
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+
+    # 3. Network
+    if file_network and file_network.filename and file_network.size and file_network.size > 0:
+        has_file = True
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".csv") as tmp:
+            tmp.write(await file_network.read())
+            tmp_path = tmp.name
+        try:
+            n_net = import_network(db, tmp_path)
+            results.append(f"✓ <b>Network/IP:</b> Đã nhập thành công <b>{n_net}</b> dòng")
+        except Exception as e:
+            results.append(f"✗ <b>Network/IP lỗi:</b> {e}")
+        finally:
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+
+    if not has_file:
+        return HTMLResponse(
+            '<div class="banner banner-warn" style="margin:0">'
+            'Vui lòng chọn ít nhất 1 file CSV để thực hiện import.'
+            '</div>'
+        )
+
+    res_html = [
+        '<div class="card" style="padding:20px;border-left:4px solid var(--ok);background:var(--surface-container-low)">',
+        '<h4 style="margin:0 0 12px 0;font-size:16px;color:var(--ok)">Kết quả xử lý Import</h4>',
+        '<ul style="margin:0;padding-left:20px;line-height:1.8">',
+    ]
+    for r in results:
+        res_html.append(f"<li>{r}</li>")
+    res_html.append("</ul>")
+
+    if REVIEW_ROWS:
+        res_html.append(
+            f'<div style="margin-top:12px;font-size:13px;color:var(--warn)">'
+            f"⚠ Có <b>{len(REVIEW_ROWS)}</b> dòng dữ liệu mập mờ cần kiểm tra lại."
+            f"</div>"
+        )
+    if VAULT_ROWS:
+        res_html.append(
+            f'<div style="margin-top:8px;font-size:13px;color:var(--primary)">'
+            f"🛡 Đã phát hiện và tách <b>{len(VAULT_ROWS)}</b> secret sang nạp Vault (không lưu mật khẩu vào DB)."
+            f"</div>"
+        )
+
+    res_html.append("</div>")
+    return HTMLResponse("".join(res_html))

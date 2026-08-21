@@ -285,7 +285,7 @@ class Subnet(Base):
     # scanner thực sự nhìn thấy được dải này. Nếu mốc này cũ, confidence phải
     # sụp xuống thay vì trôi lên — xem allocator._confidence.
     last_scan_ok_at: Mapped[datetime | None] = mapped_column(TZDateTime)
-    scan_staleness_hours: Mapped[int] = mapped_column(Integer, default=12)
+    scan_staleness_hours: Mapped[int] = mapped_column(Integer, default=30)
 
     ips: Mapped[list[IPAddress]] = relationship(back_populates="subnet")
 
@@ -554,6 +554,9 @@ class DriftFinding(Base):
     subject_key: Mapped[str] = mapped_column(String(255))
     device_id: Mapped[str | None] = mapped_column(ForeignKey("device.id"))
     ip_address_id: Mapped[str | None] = mapped_column(ForeignKey("ip_address.id"))
+
+    device: Mapped[Device | None] = relationship(foreign_keys=[device_id])
+    ip_address: Mapped[IPAddress | None] = relationship(foreign_keys=[ip_address_id])
 
     detail: Mapped[dict | None] = mapped_column(JsonType, default=dict)
     assigned_to: Mapped[str | None] = mapped_column(String(255))

@@ -5,9 +5,9 @@
     <div class="modal-head">
       <div>
         <h3>Xử lý chênh lệch</h3>
-        <div class="sub">
-          <span class="chip chip-neutral">{{ f.type }}</span>
-          <span class="mono" style="margin-left:6px">{{ f.subject }}</span>
+        <div class="sub row gap-xs" style="align-items:center;margin-top:4px">
+          <span class="chip chip-neutral" style="font-weight:600">{{ f.type_label or f.type }}</span>
+          <span style="margin-left:6px;font-weight:600;color:var(--on-surface)">{{ f.subject_display or f.subject }}</span>
         </div>
       </div>
       <button class="icon-btn" onclick="document.getElementById('drawer').remove()"
@@ -17,9 +17,12 @@
     <form hx-post="/ui/drift/{{ f.id }}/resolve" hx-target="#drawer" hx-swap="outerHTML">
       <div class="modal-body stack gap-md">
         <table class="props">
-          <tr><th>Mức độ</th><td>{{ f.severity }}</td></tr>
+          <tr><th>Mức độ</th><td><span class="chip chip-warn">{{ f.severity_label or f.severity }}</span></td></tr>
           <tr><th>Phát hiện lần đầu</th><td>{{ f.first_seen_at[:16] | replace("T", " ") }}</td></tr>
-          <tr><th>Hạn SLA</th><td>{{ f.sla_deadline[:16] | replace("T", " ") }}{% if f.sla_breached %} (đã quá){% endif %}</td></tr>
+          <tr><th>Hạn SLA</th><td>{{ f.sla_deadline[:16] | replace("T", " ") }}{% if f.sla_breached %} <span class="chip chip-error" style="font-size:11px"><span class="dot"></span>Đã quá hạn</span>{% endif %}</td></tr>
+          {% if f.subject != f.subject_display %}
+          <tr><th>Mã định danh</th><td class="mono" style="font-size:12px">{{ f.subject }}</td></tr>
+          {% endif %}
           {% for k, v in (f.detail or {}).items() %}
           <tr><th>{{ k }}</th><td>{{ v }}</td></tr>
           {% endfor %}
