@@ -350,6 +350,16 @@ gunzip -c /backup/sysops_YYYYMMDD.sql.gz | docker exec -i $(docker ps -qf name=s
 
 ---
 
+## Đánh giá tải mạng & an toàn Scanner
+
+- **Ảnh hưởng đến vCenter**: **Không ảnh hưởng**. vCenter sync hoạt động độc lập qua API HTTPS Read-Only (6h/lần), không tham gia vào luồng ping/ARP.
+- **Ảnh hưởng tải mạng (Subnets)**: Tải cực nhỏ (~32 KB cho một dải `/24`, lưu lượng ~4–8 KB/s), hoàn toàn an toàn cho switch/router.
+- **Lịch chạy tự động**: Mặc định chạy lúc **00:00 hằng đêm** (ICMP) và **00:30** (ARP) ngoài giờ làm việc.
+- **Lưu ý Firewall/IDS**: Khai báo IP của máy chủ SysOps Portal vào danh sách **Whitelist/Authorized Scanner** trên Firewall nội bộ để tránh bị chặn gói ICMP Sweep.
+- **Chống dương tính giả**: VM Windows chặn ping nhưng đang bật trên vCenter sẽ được ghi nhận là "VM đang chạy nhưng chặn ICMP", hệ thống không coi là IP trống.
+
+---
+
 ## Phụ lục A: Dùng Supabase Cloud (nếu vẫn muốn)
 
 > **Cảnh báo:** Dữ liệu IP/MAC/credential sẽ đi qua internet. Chỉ dùng cho demo/POC.

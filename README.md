@@ -189,8 +189,10 @@ IP đang có máy production chạy — đây là chế độ hỏng nguy hiểm
 hệ thống. Mỗi subnet có `last_scan_ok_at`, chỉ được cập nhật khi một lượt
 quét đi qua **canary** (ping gateway + VM đang bật trước, chỉ tin phần còn
 lại nếu canary sống). Khi dữ liệu quét cũ quá `scan_staleness_hours` (mặc
-định 12h), `confidence` của mọi gợi ý trong dải đó bị ép về dưới 0.35 và UI
+định 30h — tương thích chu kỳ quét tự động 00:00 hằng đêm), `confidence` của mọi gợi ý trong dải đó bị ép về dưới 0.35 và UI
 hiện cảnh báo rõ ràng — không bao giờ "An toàn cấp ngay".
+
+Quét mạng chạy lúc **00:00 đêm** (ICMP) và **00:30** (ARP) với concurrency 64 (~32 KB/dải /24), độc lập hoàn toàn với vCenter API (chỉ đọc) và không gây nghẽn switch. Cần whitelist IP của portal trên firewall nội bộ để tránh kích hoạt rule chống ICMP sweep.
 
 ---
 
