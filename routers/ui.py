@@ -28,6 +28,7 @@ from auth import ADMIN, REQUESTER, SYSOPS, VIEWER, Principal, auth_mode, require
 from core import active_device, device_summary, find_subnet_for, utcnow
 from db import get_db
 from models import DriftFinding, DriftStatus, IPAddress, Severity, Subnet
+from routers.admin import list_sync_runs, trigger_scan
 from routers.drift import (
     DRIFT_TYPE_LABELS,
     SEV_LABELS,
