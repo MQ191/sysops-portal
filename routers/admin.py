@@ -40,8 +40,22 @@ class SubnetCreate(BaseModel):
     scan_staleness_hours: int = Field(30, ge=1, le=720)
 
 
+class SubnetUpdate(BaseModel):
+    name: str | None = None
+    vlan_id: int | None = None
+    gateway: str | None = None
+    purpose: str | None = None
+    dhcp_range_start: str | None = None
+    dhcp_range_end: str | None = None
+    reserved_ranges: list[dict] | None = None
+    allocation_policy: str | None = None
+    cooldown_days: int | None = Field(None, ge=0, le=365)
+    scan_staleness_hours: int | None = Field(None, ge=1, le=720)
+    is_active: bool | None = None
+
+
 # --------------------------------------------------------------------------- #
-# Khai báo dải mạng
+# Khai báo & quản lý dải mạng
 # --------------------------------------------------------------------------- #
 
 
@@ -84,6 +98,72 @@ def create_subnet(
     audit(db, p.email, "create_subnet", "subnet", s.id, {"cidr": s.cidr})
     db.commit()
     return {"id": s.id, "cidr": s.cidr}
+
+
+@router.patch("/subnets/{subnet_id}", tags=["IPAM"])
+def update_subnet(
+    subnet_id: str,
+    body: SubnetUpdate,
+    db: Session = Depends(get_db),
+    p: Principal = Depends(require(ADMIN)),
+):
+    s = db.get(Subnet, subnet_id)
+    if not s:
+        raise HTTPException(404, "Không tìm thấy dải mạng")
+
+    changes = {}
+    if body.name is not None:
+        s.name = body.name
+        changes["name"] = body.name
+    if body.vlan_id is not None:
+        s.vlan_id = body.vlan_id
+        changes["vlan_id"] = body.vlan_id
+    if body.gateway is not None:
+        s.gateway = body.gateway or None
+        changes["gateway"] = s.gateway
+    if body.purpose is not None:
+        s.purpose = body.purpose
+        changes["purpose"] = body.purpose
+    if body.dhcp_range_start is not None:
+        s.dhcp_range_start = body.dhcp_range_start or None
+        changes["dhcp_range_start"] = s.dhcp_range_start
+    if body.dhcp_range_end is not None:
+        s.dhcp_range_end = body.dhcp_range_end or None
+        changes["dhcp_range_end"] = s.dhcp_range_end
+    if body.allocation_policy is not None:
+        if body.allocation_policy not in ("lowest_first", "fill_gaps", "sparse"):
+            raise HTTPException(400, "allocation_policy không hợp lệ")
+        s.allocation_policy = body.allocation_policy
+        changes["allocation_policy"] = body.allocation_policy
+    if body.cooldown_days is not None:
+        s.cooldown_days = body.cooldown_days
+        changes["cooldown_days"] = body.cooldown_days
+    if body.scan_staleness_hours is not None:
+        s.scan_staleness_hours = body.scan_staleness_hours
+        changes["scan_staleness_hours"] = body.scan_staleness_hours
+    if body.is_active is not None:
+        s.is_active = body.is_active
+        changes["is_active"] = body.is_active
+
+    audit(db, p.email, "update_subnet", "subnet", s.id, changes)
+    db.commit()
+    return {"id": s.id, "cidr": s.cidr, "updated": changes}
+
+
+@router.delete("/subnets/{subnet_id}", tags=["IPAM"])
+def delete_subnet(
+    subnet_id: str,
+    db: Session = Depends(get_db),
+    p: Principal = Depends(require(ADMIN)),
+):
+    s = db.get(Subnet, subnet_id)
+    if not s:
+        raise HTTPException(404, "Không tìm thấy dải mạng")
+
+    s.is_active = False
+    audit(db, p.email, "delete_subnet", "subnet", s.id, {"cidr": s.cidr})
+    db.commit()
+    return {"id": s.id, "cidr": s.cidr, "deleted": True}
 
 
 # --------------------------------------------------------------------------- #

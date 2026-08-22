@@ -109,6 +109,15 @@ def list_subnets(
         _, ctx = load_subnet_context(db, subnet.cidr)
         records = load_ip_records(db, subnet, ctx)
         stats = alloc.subnet_stats(ctx, records, now)
+        stats["id"] = subnet.id
+        stats["vlan_id"] = subnet.vlan_id
+        stats["gateway"] = subnet.gateway
+        stats["purpose"] = subnet.purpose
+        stats["allocation_policy"] = subnet.allocation_policy
+        stats["cooldown_days"] = subnet.cooldown_days
+        stats["scan_staleness_hours"] = subnet.scan_staleness_hours
+        stats["dhcp_range_start"] = subnet.dhcp_range_start
+        stats["dhcp_range_end"] = subnet.dhcp_range_end
         stats["scanner_warning"] = ctx.staleness_warning(now)
         stats["last_scan_ok_at"] = (
             subnet.last_scan_ok_at.isoformat() if subnet.last_scan_ok_at else None

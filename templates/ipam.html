@@ -133,16 +133,29 @@
   </div>
 
   {# --- Danh mục subnet (12 cột) --- #}
-  <div class="card-flat col-12">
+  <div class="card-flat col-12" id="subnet-catalog">
     <div class="table-head">
-      <h3>Danh mục dải mạng</h3>
+      <div>
+        <h3 style="margin:0">Danh mục dải mạng</h3>
+      </div>
+      <button class="btn btn-primary" style="padding:6px 14px;font-size:13px"
+              hx-get="/ui/subnets/create-form"
+              hx-target="#drawer-slot" hx-swap="innerHTML">
+        {{ ico.icon("add") }}<span>Thêm dải mạng</span>
+      </button>
     </div>
     <div class="table-wrap">
       <table class="data">
         <thead>
           <tr>
-            <th>CIDR</th><th>Tên</th><th>Chính sách</th>
-            <th>Sử dụng</th><th>Trạng thái</th><th>Scanner</th><th class="right">Xung đột</th>
+            <th>CIDR</th>
+            <th>Tên dải</th>
+            <th>Chính sách</th>
+            <th>Sử dụng</th>
+            <th>Trạng thái</th>
+            <th>Scanner</th>
+            <th class="right">Xung đột</th>
+            <th class="right" style="width:140px">Thao tác</th>
           </tr>
         </thead>
         <tbody>
@@ -151,11 +164,21 @@
             <td class="ip">{{ s.cidr }}</td>
             <td>
               <div class="cell-title">{{ s.name or "—" }}</div>
-              <div class="cell-sub">cách ly {{ s.cooldown_days }} ngày</div>
+              <div class="cell-sub">cách ly {{ s.cooldown_days or 14 }} ngày{% if s.vlan_id %} · VLAN {{ s.vlan_id }}{% endif %}</div>
             </td>
-            <td class="cell-sub">{{ s.allocation_policy }}</td>
             <td>
-              <div class="row gap-sm">
+              {% if s.allocation_policy == 'lowest_first' %}
+                <span class="chip chip-neutral" title="Ưu tiên cấp các IP có số thứ tự nhỏ nhất trước">Từ thấp đến cao</span>
+              {% elif s.allocation_policy == 'fill_gaps' %}
+                <span class="chip chip-neutral" title="Điền vào các khoảng IP trống giữa các IP đã cấp">Lấp chỗ trống</span>
+              {% elif s.allocation_policy == 'sparse' %}
+                <span class="chip chip-neutral" title="Phân bổ trải đều khắp dải để tránh tập trung mật độ">Phân tán đều</span>
+              {% else %}
+                <span class="chip chip-neutral">{{ s.allocation_policy or "Từ thấp đến cao" }}</span>
+              {% endif %}
+            </td>
+            <td>
+              <div class="row gap-sm" style="align-items:center">
                 <div class="bar" style="width:64px">
                   <span class="{{ 'b-error' if s.utilization > 0.85 else '' }}"
                         style="width: {{ (s.utilization * 100) | round | int }}%"></span>
@@ -181,6 +204,21 @@
               {% if s.conflict %}
               <span class="chip chip-error">{{ s.conflict }}</span>
               {% else %}<span class="muted">0</span>{% endif %}
+            </td>
+            <td class="right">
+              <div class="row gap-xs" style="justify-content:flex-end">
+                <button class="btn btn-quiet" style="padding:4px 10px;font-size:12px"
+                        hx-get="/ui/subnets/{{ s.id }}/edit-form"
+                        hx-target="#drawer-slot" hx-swap="innerHTML">
+                  {{ ico.icon("settings") }}<span>Sửa</span>
+                </button>
+                <button class="btn btn-quiet" style="padding:4px 10px;font-size:12px;color:var(--error)"
+                        hx-post="/ui/subnets/{{ s.id }}/delete"
+                        hx-confirm="Bạn có chắc chắn muốn xoá dải mạng {{ s.cidr }} khỏi hệ thống không?"
+                        hx-target="#toasts" hx-swap="beforeend">
+                  <span>Xoá</span>
+                </button>
+              </div>
             </td>
           </tr>
         {% endfor %}

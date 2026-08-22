@@ -1,0 +1,86 @@
+{% import "_icons.html" as ico %}
+<div class="scrim" id="drawer">
+  <div class="modal" role="dialog" aria-modal="true" aria-label="Sửa cấu hình dải mạng" style="max-width:560px">
+
+    <div class="modal-head">
+      <div>
+        <h3>Sửa cấu hình dải mạng</h3>
+        <div class="sub row gap-xs" style="align-items:center;margin-top:4px">
+          <span class="chip chip-neutral" style="font-weight:600">{{ s.cidr }}</span>
+          {% if s.vlan_id %}<span class="chip chip-neutral">VLAN {{ s.vlan_id }}</span>{% endif %}
+        </div>
+      </div>
+      <button class="icon-btn" onclick="document.getElementById('drawer').remove()" aria-label="Đóng">×</button>
+    </div>
+
+    <form hx-post="/ui/subnets/{{ s.id }}/edit" hx-target="#drawer-slot" hx-swap="innerHTML">
+      <div class="modal-body stack gap-md" style="max-height:75vh;overflow-y:auto">
+        
+        <div class="field">
+          <label for="sn-name">Tên dải mạng *</label>
+          <input class="input" id="sn-name" name="name" value="{{ s.name or '' }}" required placeholder="VD: Dải VM dự án SDC1">
+        </div>
+
+        <div class="grid12 gap-sm">
+          <div class="field col-6">
+            <label for="sn-gateway">Gateway</label>
+            <input class="input ip" id="sn-gateway" name="gateway" value="{{ s.gateway or '' }}" placeholder="VD: 10.0.76.1">
+          </div>
+          <div class="field col-6">
+            <label for="sn-vlan">VLAN ID</label>
+            <input class="input mono" type="number" id="sn-vlan" name="vlan_id" value="{{ s.vlan_id or '' }}" placeholder="VD: 76">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="sn-policy">Chính sách cấp phát IP *</label>
+          <select class="input" id="sn-policy" name="allocation_policy" required>
+            <option value="lowest_first" {% if s.allocation_policy == 'lowest_first' %}selected{% endif %}>
+              Từ thấp đến cao (Ưu tiên cấp IP có số thứ tự nhỏ nhất trước)
+            </option>
+            <option value="fill_gaps" {% if s.allocation_policy == 'fill_gaps' %}selected{% endif %}>
+              Lấp chỗ trống (Điền vào các khoảng IP trống giữa các IP đã cấp)
+            </option>
+            <option value="sparse" {% if s.allocation_policy == 'sparse' %}selected{% endif %}>
+              Phân tán đều (Phân bổ trải đều khắp dải để tránh tập trung)
+            </option>
+          </select>
+          <div class="cell-sub" style="margin-top:4px">Quyết định thuật toán tự động chọn IP khi người dùng tạo máy ảo mới.</div>
+        </div>
+
+        <div class="grid12 gap-sm">
+          <div class="field col-6">
+            <label for="sn-cooldown">Thời gian cách ly (ngày) *</label>
+            <input class="input mono" type="number" id="sn-cooldown" name="cooldown_days" min="0" max="365" value="{{ s.cooldown_days or 14 }}" required>
+            <div class="cell-sub" style="margin-top:4px">Số ngày giữ IP sau khi thu hồi trước khi cho phép cấp lại.</div>
+          </div>
+          <div class="field col-6">
+            <label for="sn-staleness">Ngưỡng quét báo cũ (giờ) *</label>
+            <input class="input mono" type="number" id="sn-staleness" name="scan_staleness_hours" min="1" max="720" value="{{ s.scan_staleness_hours or 30 }}" required>
+            <div class="cell-sub" style="margin-top:4px">Nếu quá số giờ này chưa có kết quả quét mới thì cảnh báo.</div>
+          </div>
+        </div>
+
+        <div class="grid12 gap-sm">
+          <div class="field col-6">
+            <label for="sn-dhcp-start">Dải DHCP từ IP</label>
+            <input class="input ip" id="sn-dhcp-start" name="dhcp_range_start" value="{{ s.dhcp_range_start or '' }}" placeholder="VD: 10.0.76.200">
+          </div>
+          <div class="field col-6">
+            <label for="sn-dhcp-end">Đến IP</label>
+            <input class="input ip" id="sn-dhcp-end" name="dhcp_range_end" value="{{ s.dhcp_range_end or '' }}" placeholder="VD: 10.0.76.250">
+          </div>
+        </div>
+
+      </div>
+
+      <div class="modal-foot">
+        <button class="btn btn-ghost" type="button" onclick="document.getElementById('drawer').remove()">Huỷ</button>
+        <button class="btn btn-primary" type="submit">
+          {{ ico.icon("check_circle") }}Lưu thay đổi<span class="spin"></span>
+        </button>
+      </div>
+    </form>
+
+  </div>
+</div>

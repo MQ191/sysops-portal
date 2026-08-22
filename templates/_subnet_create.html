@@ -1,0 +1,85 @@
+{% import "_icons.html" as ico %}
+<div class="scrim" id="drawer">
+  <div class="modal" role="dialog" aria-modal="true" aria-label="Thêm dải mạng mới" style="max-width:560px">
+
+    <div class="modal-head">
+      <div>
+        <h3>Thêm dải mạng mới</h3>
+        <div class="sub" style="margin-top:4px">Khai báo subnet để hệ thống quản lý và quét mạng tự động.</div>
+      </div>
+      <button class="icon-btn" onclick="document.getElementById('drawer').remove()" aria-label="Đóng">×</button>
+    </div>
+
+    <form hx-post="/ui/subnets/create" hx-target="#drawer-slot" hx-swap="innerHTML">
+      <div class="modal-body stack gap-md" style="max-height:75vh;overflow-y:auto">
+        
+        <div class="grid12 gap-sm">
+          <div class="field col-7">
+            <label for="sn-cidr">Địa chỉ dải mạng (CIDR) *</label>
+            <input class="input ip" id="sn-cidr" name="cidr" required placeholder="VD: 10.0.80.0/24">
+          </div>
+          <div class="field col-5">
+            <label for="sn-vlan">VLAN ID</label>
+            <input class="input mono" type="number" id="sn-vlan" name="vlan_id" placeholder="VD: 80">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="sn-name">Tên dải mạng *</label>
+          <input class="input" id="sn-name" name="name" required placeholder="VD: Dải VM dự án SDC1">
+        </div>
+
+        <div class="field">
+          <label for="sn-gateway">Gateway</label>
+          <input class="input ip" id="sn-gateway" name="gateway" placeholder="VD: 10.0.80.1">
+        </div>
+
+        <div class="field">
+          <label for="sn-policy">Chính sách cấp phát IP *</label>
+          <select class="input" id="sn-policy" name="allocation_policy" required>
+            <option value="lowest_first" selected>
+              Từ thấp đến cao (Ưu tiên cấp IP có số thứ tự nhỏ nhất trước)
+            </option>
+            <option value="fill_gaps">
+              Lấp chỗ trống (Điền vào các khoảng IP trống giữa các IP đã cấp)
+            </option>
+            <option value="sparse">
+              Phân tán đều (Phân bổ trải đều khắp dải để tránh tập trung)
+            </option>
+          </select>
+        </div>
+
+        <div class="grid12 gap-sm">
+          <div class="field col-6">
+            <label for="sn-cooldown">Thời gian cách ly (ngày) *</label>
+            <input class="input mono" type="number" id="sn-cooldown" name="cooldown_days" min="0" max="365" value="14" required>
+          </div>
+          <div class="field col-6">
+            <label for="sn-staleness">Ngưỡng quét báo cũ (giờ) *</label>
+            <input class="input mono" type="number" id="sn-staleness" name="scan_staleness_hours" min="1" max="720" value="30" required>
+          </div>
+        </div>
+
+        <div class="grid12 gap-sm">
+          <div class="field col-6">
+            <label for="sn-dhcp-start">Dải DHCP từ IP</label>
+            <input class="input ip" id="sn-dhcp-start" name="dhcp_range_start" placeholder="VD: 10.0.80.200">
+          </div>
+          <div class="field col-6">
+            <label for="sn-dhcp-end">Đến IP</label>
+            <input class="input ip" id="sn-dhcp-end" name="dhcp_range_end" placeholder="VD: 10.0.80.250">
+          </div>
+        </div>
+
+      </div>
+
+      <div class="modal-foot">
+        <button class="btn btn-ghost" type="button" onclick="document.getElementById('drawer').remove()">Huỷ</button>
+        <button class="btn btn-primary" type="submit">
+          {{ ico.icon("check_circle") }}Tạo dải mạng<span class="spin"></span>
+        </button>
+      </div>
+    </form>
+
+  </div>
+</div>

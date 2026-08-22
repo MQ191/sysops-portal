@@ -244,6 +244,144 @@ def ui_ipam(
     )
 
 
+# --------------------------------------------------------------------------- #
+# Quản trị Dải mạng (Subnet CRUD UI)
+# --------------------------------------------------------------------------- #
+
+
+@router.get("/ui/subnets/create-form", response_class=HTMLResponse)
+def ui_subnet_create_form(
+    request: Request,
+    p: Principal = Depends(require(ADMIN)),
+):
+    return _fragment(request, "_subnet_create.html", {"request": request, "principal": p})
+
+
+@router.post("/ui/subnets/create", response_class=HTMLResponse)
+def ui_subnet_create(
+    request: Request,
+    cidr: str = Form(...),
+    name: str = Form(""),
+    vlan_id: str = Form(""),
+    gateway: str = Form(""),
+    allocation_policy: str = Form("lowest_first"),
+    cooldown_days: int = Form(14),
+    scan_staleness_hours: int = Form(30),
+    dhcp_range_start: str = Form(""),
+    dhcp_range_end: str = Form(""),
+    db: Session = Depends(get_db),
+    p: Principal = Depends(require(ADMIN)),
+):
+    from routers.admin import SubnetCreate, create_subnet
+
+    try:
+        vid = int(vlan_id) if vlan_id.strip() else None
+        create_subnet(
+            SubnetCreate(
+                cidr=cidr.strip(),
+                name=name.strip(),
+                vlan_id=vid,
+                gateway=gateway.strip() or None,
+                allocation_policy=allocation_policy,
+                cooldown_days=cooldown_days,
+                scan_staleness_hours=scan_staleness_hours,
+                dhcp_range_start=dhcp_range_start.strip() or None,
+                dhcp_range_end=dhcp_range_end.strip() or None,
+            ),
+            db=db,
+            p=p,
+        )
+    except HTTPException as exc:
+        return _toast(request, "error", exc.detail, "Lỗi tạo dải mạng")
+    except Exception as exc:
+        return _toast(request, "error", str(exc), "Lỗi tạo dải mạng")
+
+    return HTMLResponse("<script>window.location.reload();</script>")
+
+
+@router.get("/ui/subnets/{subnet_id}/edit-form", response_class=HTMLResponse)
+def ui_subnet_edit_form(
+    request: Request,
+    subnet_id: str,
+    db: Session = Depends(get_db),
+    p: Principal = Depends(require(ADMIN)),
+):
+    s = db.get(Subnet, subnet_id)
+    if not s:
+        return _toast(request, "error", "Không tìm thấy dải mạng.", "Lỗi")
+
+    return _fragment(
+        request,
+        "_subnet_edit.html",
+        {
+            "request": request,
+            "principal": p,
+            "s": s,
+        },
+    )
+
+
+@router.post("/ui/subnets/{subnet_id}/edit", response_class=HTMLResponse)
+def ui_subnet_edit(
+    request: Request,
+    subnet_id: str,
+    name: str = Form(""),
+    vlan_id: str = Form(""),
+    gateway: str = Form(""),
+    allocation_policy: str = Form("lowest_first"),
+    cooldown_days: int = Form(14),
+    scan_staleness_hours: int = Form(30),
+    dhcp_range_start: str = Form(""),
+    dhcp_range_end: str = Form(""),
+    db: Session = Depends(get_db),
+    p: Principal = Depends(require(ADMIN)),
+):
+    from routers.admin import SubnetUpdate, update_subnet
+
+    try:
+        vid = int(vlan_id) if vlan_id.strip() else None
+        update_subnet(
+            subnet_id=subnet_id,
+            body=SubnetUpdate(
+                name=name.strip(),
+                vlan_id=vid,
+                gateway=gateway.strip() or None,
+                allocation_policy=allocation_policy,
+                cooldown_days=cooldown_days,
+                scan_staleness_hours=scan_staleness_hours,
+                dhcp_range_start=dhcp_range_start.strip() or None,
+                dhcp_range_end=dhcp_range_end.strip() or None,
+            ),
+            db=db,
+            p=p,
+        )
+    except HTTPException as exc:
+        return _toast(request, "error", exc.detail, "Lỗi cập nhật")
+    except Exception as exc:
+        return _toast(request, "error", str(exc), "Lỗi cập nhật")
+
+    return HTMLResponse("<script>window.location.reload();</script>")
+
+
+@router.post("/ui/subnets/{subnet_id}/delete", response_class=HTMLResponse)
+def ui_subnet_delete(
+    request: Request,
+    subnet_id: str,
+    db: Session = Depends(get_db),
+    p: Principal = Depends(require(ADMIN)),
+):
+    from routers.admin import delete_subnet
+
+    try:
+        delete_subnet(subnet_id=subnet_id, db=db, p=p)
+    except HTTPException as exc:
+        return _toast(request, "error", exc.detail, "Lỗi xoá dải mạng")
+    except Exception as exc:
+        return _toast(request, "error", str(exc), "Lỗi xoá dải mạng")
+
+    return HTMLResponse("<script>window.location.reload();</script>")
+
+
 @router.post("/ui/suggest", response_class=HTMLResponse)
 def ui_suggest(
     request: Request,
